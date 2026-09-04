@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ========================================================= -->
+    <!-- MICRÓFONO -->
+    <!-- ========================================================= -->
+
+    <uses-permission
+        android:name="android.permission.RECORD_AUDIO" />
+
+
+    <!-- ========================================================= -->
+    <!-- FOREGROUND SERVICE -->
+    <!-- ========================================================= -->
+
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+
+    <!-- ========================================================= -->
+    <!-- NOTIFICACIONES -->
+    <!-- ========================================================= -->
+
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+
+    <!-- ========================================================= -->
+    <!-- ALARMAS EXACTAS -->
+    <!-- ========================================================= -->
+
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+
+    <!-- ========================================================= -->
+    <!-- HEALTH CONNECT -->
+    <!-- ========================================================= -->
+
+    <uses-permission
+        android:name="android.permission.health.READ_STEPS" />
+
+    <uses-permission
+        android:name="android.permission.health.READ_HEART_RATE" />
+
+    <uses-permission
+        android:name="android.permission.health.READ_SLEEP" />
+
+
+    <!-- ========================================================= -->
+    <!-- HEALTH CONNECT INSTALADO -->
+    <!-- ========================================================= -->
+
+    <queries>
+
+        <package
+            android:name="com.google.android.apps.healthdata" />
+
+    </queries>
+
+
+    <!-- ========================================================= -->
+    <!-- APLICACIÓN -->
+    <!-- ========================================================= -->
+
+    <application
+
+        android:usesCleartextTraffic="true"
+
+        android:allowBackup="true"
+
+        android:icon="@mipmap/ic_launcher"
+
+        android:label="Vibra la vida"
+
+        android:roundIcon="@mipmap/ic_launcher_round"
+
+        android:supportsRtl="true"
+
+        android:theme="@style/Theme.VibraLaVida">
+
+
+        <!-- ===================================================== -->
+        <!-- MAIN ACTIVITY -->
+        <!-- ===================================================== -->
+
+        <activity
+
+            android:name=".MainActivity"
+
+            android:exported="true"
+
+            android:theme="@style/Theme.VibraLaVida">
+
+
+            <intent-filter>
+
+
+                <action
+                    android:name="android.intent.action.MAIN" />
+
+
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
+
+
+            </intent-filter>
+
+
+        </activity>
+
+
+        <!-- ===================================================== -->
+        <!-- HEALTH CONNECT RATIONALE -->
+        <!-- ===================================================== -->
+
+        <activity
+
+            android:name=".trastornos_ritmo.PermissionsRationaleActivity"
+
+            android:exported="true">
+
+
+            <intent-filter>
+
+
+                <action
+                    android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+
+
+            </intent-filter>
+
+
+        </activity>
+
+
+        <!-- ===================================================== -->
+        <!-- HEALTH CONNECT ANDROID 14+ -->
+        <!-- ===================================================== -->
+
+        <activity-alias
+
+            android:name="ViewPermissionUsageActivity"
+
+            android:exported="true"
+
+            android:targetActivity=".trastornos_ritmo.PermissionsRationaleActivity"
+
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+
+
+            <intent-filter>
+
+
+                <action
+                    android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+
+
+                <category
+                    android:name="android.intent.category.HEALTH_PERMISSIONS" />
+
+
+            </intent-filter>
+
+
+        </activity-alias>
+
+
+        <!-- ===================================================== -->
+        <!-- SERVICIO MODO SUEÑO -->
+        <!-- ===================================================== -->
+
+        <service
+
+            android:name=".habitos_saludables.SleepMonitoringService"
+
+            android:exported="false"
+
+            android:foregroundServiceType="microphone" />
+
+
+        <!-- ===================================================== -->
+        <!-- RECEIVER DE MEDICAMENTOS -->
+        <!-- ===================================================== -->
+
+        <receiver
+
+            android:name=".agenda.medicamentos.RecordatorioMedicamentoReceiver"
+
+            android:exported="false" />
+
+
+    </application>
+
+
+</manifest>

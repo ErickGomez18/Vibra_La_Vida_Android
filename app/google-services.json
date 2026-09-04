@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "477659903307",
+    "project_id": "vibra-la-vida",
+    "storage_bucket": "vibra-la-vida.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:477659903307:android:065df65ef104d15e9364ce",
+        "android_client_info": {
+          "package_name": "com.example.vibralavida"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDYsEDPZnwwuL_nTh6XoYhVZQUT-tyc20"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
