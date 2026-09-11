@@ -9,6 +9,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PUT
+import retrofit2.http.DELETE
 
 
 // ============================================================================
@@ -60,6 +61,22 @@ interface PerfilApi {
 
         @Body
         perfil: PerfilRequest
+
+    ): Call<ActualizarPerfilResponse>
+
+    // ========================================================================
+    // ELIMINAR CUENTA
+    // ========================================================================
+    //
+    // DELETE /api/users/me
+    //
+    // ========================================================================
+
+    @DELETE("api/users/me")
+    fun eliminarCuenta(
+
+        @Header("Authorization")
+        authorization: String
 
     ): Call<ActualizarPerfilResponse>
 }

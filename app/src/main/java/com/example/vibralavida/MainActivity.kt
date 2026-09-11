@@ -95,7 +95,6 @@ import androidx.compose.material3.lightColorScheme
 // ============================================================================
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -142,7 +141,9 @@ import com.google.firebase.auth.FirebaseAuth
 // ============================================================================
 
 import com.example.vibralavida.api.PerfilRepository
+import com.example.vibralavida.api.MedicamentosRepository
 import com.example.vibralavida.api.modelos.PerfilRequest
+import com.example.vibralavida.api.modelos.MedicamentoRequest
 import com.example.vibralavida.api.modelos.UsuarioPerfil
 
 
@@ -566,6 +567,38 @@ fun AppScreen() {
 
 
     // ========================================================================
+    // MODO DE EDICIÓN DEL PERFIL
+    // ========================================================================
+    //
+    // false = el usuario está completando su perfil por primera vez.
+    // true  = el usuario ya tenía perfil y entró desde "Editar perfil".
+    //
+    // Esto evita que el botón "Volver" deje una sesión incompleta activa.
+    //
+    // ========================================================================
+
+    var editandoPerfilExistente by remember {
+
+        mutableStateOf(false)
+    }
+
+
+    // ========================================================================
+    // GUARDANDO PERFIL
+    // ========================================================================
+    //
+    // Permite mostrar un indicador de carga en "Queremos conocerte"
+    // mientras Render/Firebase terminan de guardar la información.
+    //
+    // ========================================================================
+
+    var guardandoPerfil by remember {
+
+        mutableStateOf(false)
+    }
+
+
+    // ========================================================================
     // ESCALA DE ATENAS
     // ========================================================================
 
@@ -634,219 +667,15 @@ fun AppScreen() {
     // SESIÓN PERSISTENTE
     // ========================================================================
     //
-    // Al abrir la app verificamos Firebase Authentication.
+    // IMPORTANTE:
     //
-    // Si currentUser existe:
+    // La aplicación SIEMPRE inicia visualmente en Splash.
     //
-    // → el usuario ya tenía una sesión iniciada.
-    // → obtenemos su perfil mediante la API.
+    // La sesión persistente se revisa cuando el usuario toca el logo.
+    // Así evitamos que una sesión antigua o incompleta cambie de pantalla
+    // antes de que el usuario interactúe con la app.
     //
     // ========================================================================
-
-    LaunchedEffect(Unit) {
-
-
-        val usuarioFirebase =
-            FirebaseAuth
-                .getInstance()
-                .currentUser
-
-
-        // ====================================================================
-        // NO EXISTE SESIÓN
-        // ====================================================================
-
-        if (
-            usuarioFirebase == null
-        ) {
-
-            currentScreen =
-                Screen.Splash
-
-        } else {
-
-
-            // =================================================================
-            // EXISTE SESIÓN
-            // =================================================================
-
-            PerfilRepository
-                .obtenerPerfil(
-
-
-                    // =========================================================
-                    // PERFIL ENCONTRADO
-                    // =========================================================
-
-                    onSuccess = {
-                            response ->
-
-
-                        val perfil =
-                            response.user
-
-
-                        if (
-                            perfil == null
-                        ) {
-
-                            userName =
-                                usuarioFirebase
-                                    .displayName
-                                    .orEmpty()
-
-
-                            currentScreen =
-                                Screen.InitialProfile
-
-                        } else {
-
-
-                            // =================================================
-                            // NOMBRE
-                            // =================================================
-
-                            userName =
-
-                                perfil.nombreCompleto
-                                    ?.takeIf {
-                                        it.isNotBlank()
-                                    }
-
-                                    ?: perfil.nombre
-                                        ?.takeIf {
-                                            it.isNotBlank()
-                                        }
-
-                                            ?: usuarioFirebase
-                                        .displayName
-                                        .orEmpty()
-
-
-                            // =================================================
-                            // PERFIL
-                            // =================================================
-
-                            userAge =
-                                perfil.edad.orEmpty()
-
-
-                            userGender =
-                                perfil.genero.orEmpty()
-
-
-                            userWeight =
-                                perfil.peso.orEmpty()
-
-
-                            userHeight =
-                                perfil.estatura.orEmpty()
-
-
-                            userActivityLevel =
-                                perfil
-                                    .nivelActividad
-                                    .orEmpty()
-
-
-                            // =================================================
-                            // ENFERMEDADES
-                            // =================================================
-
-                            userChronicDiseases =
-                                perfil.enfermedadesCronicas
-
-
-                            userOtherChronicDisease =
-                                perfil
-                                    .otraEnfermedadCronica
-                                    .orEmpty()
-
-
-                            // =================================================
-                            // DECIDIR PANTALLA
-                            // =================================================
-
-                            if (
-                                perfilEstaCompleto(
-                                    perfil
-                                )
-                            ) {
-
-                                currentScreen =
-                                    Screen.Home
-
-                            } else {
-
-                                currentScreen =
-                                    Screen.InitialProfile
-                            }
-                        }
-                    },
-
-
-                    // =========================================================
-                    // TIENE AUTH PERO NO PERFIL
-                    // =========================================================
-
-                    onProfileNotFound = {
-
-                        userName =
-                            usuarioFirebase
-                                .displayName
-                                .orEmpty()
-
-
-                        currentScreen =
-                            Screen.InitialProfile
-                    },
-
-
-                    // =========================================================
-                    // SESIÓN INVÁLIDA
-                    // =========================================================
-
-                    onUnauthorized = {
-
-                        FirebaseAuth
-                            .getInstance()
-                            .signOut()
-
-
-                        currentScreen =
-                            Screen.Auth
-                    },
-
-
-                    // =========================================================
-                    // ERROR DE CONEXIÓN
-                    // =========================================================
-
-                    onError = {
-                            mensaje ->
-
-
-                        Toast
-                            .makeText(
-
-                                context,
-
-                                "No fue posible recuperar tu perfil: $mensaje",
-
-                                Toast.LENGTH_LONG
-                            )
-                            .show()
-
-
-                        // No cerramos Firebase porque el error
-                        // puede ser simplemente que la API esté apagada.
-
-                        currentScreen =
-                            Screen.Auth
-                    }
-                )
-        }
-    }
 
 
     // ========================================================================
@@ -868,8 +697,186 @@ fun AppScreen() {
 
                 onLogoClick = {
 
-                    currentScreen =
-                        Screen.Auth
+                    val usuarioFirebase =
+                        FirebaseAuth
+                            .getInstance()
+                            .currentUser
+
+
+                    // ========================================================
+                    // NO HAY SESIÓN GUARDADA
+                    // ========================================================
+
+                    if (
+                        usuarioFirebase == null
+                    ) {
+
+                        currentScreen =
+                            Screen.Auth
+
+                    } else {
+
+
+                        // ====================================================
+                        // HAY SESIÓN: VALIDAR PERFIL CON LA API
+                        // ====================================================
+
+                        PerfilRepository
+                            .obtenerPerfil(
+
+                                onSuccess = {
+                                        response ->
+
+
+                                    val perfil =
+                                        response.user
+
+
+                                    if (
+                                        perfil != null &&
+                                        perfilEstaCompleto(
+                                            perfil
+                                        )
+                                    ) {
+
+
+                                        // ------------------------------------
+                                        // CARGAR NOMBRE
+                                        // ------------------------------------
+
+                                        userName =
+
+                                            perfil.nombreCompleto
+                                                ?.takeIf {
+                                                    it.isNotBlank()
+                                                }
+
+                                                ?: perfil.nombre
+                                                    ?.takeIf {
+                                                        it.isNotBlank()
+                                                    }
+
+                                                        ?: usuarioFirebase
+                                                    .displayName
+                                                    .orEmpty()
+
+
+                                        // ------------------------------------
+                                        // CARGAR PERFIL
+                                        // ------------------------------------
+
+                                        userAge =
+                                            perfil.edad.orEmpty()
+
+                                        userGender =
+                                            perfil.genero.orEmpty()
+
+                                        userWeight =
+                                            perfil.peso.orEmpty()
+
+                                        userHeight =
+                                            perfil.estatura.orEmpty()
+
+                                        userActivityLevel =
+                                            perfil.nivelActividad.orEmpty()
+
+                                        userChronicDiseases =
+                                            perfil.enfermedadesCronicas
+
+                                        userOtherChronicDisease =
+                                            perfil.otraEnfermedadCronica.orEmpty()
+
+
+                                        editandoPerfilExistente =
+                                            false
+
+
+                                        currentScreen =
+                                            Screen.Home
+
+
+                                    } else {
+
+
+                                        // ------------------------------------
+                                        // SESIÓN ANTIGUA / PERFIL INCOMPLETO
+                                        // ------------------------------------
+                                        //
+                                        // No mandamos automáticamente a
+                                        // "Queremos conocerte".
+                                        //
+                                        // Cerramos la sesión antigua y
+                                        // mostramos las opciones de acceso.
+                                        //
+                                        // ------------------------------------
+
+                                        FirebaseAuth
+                                            .getInstance()
+                                            .signOut()
+
+
+                                        currentScreen =
+                                            Screen.Auth
+                                    }
+                                },
+
+
+                                onProfileNotFound = {
+
+
+                                    // El usuario existe en Auth, pero no tiene
+                                    // un perfil guardado en Firestore.
+                                    //
+                                    // Para evitar el salto inesperado a
+                                    // "Queremos conocerte", cerramos esta
+                                    // sesión antigua y mostramos Auth.
+
+                                    FirebaseAuth
+                                        .getInstance()
+                                        .signOut()
+
+
+                                    currentScreen =
+                                        Screen.Auth
+                                },
+
+
+                                onUnauthorized = {
+
+                                    FirebaseAuth
+                                        .getInstance()
+                                        .signOut()
+
+
+                                    currentScreen =
+                                        Screen.Auth
+                                },
+
+
+                                onError = {
+                                        mensaje ->
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "No fue posible recuperar tu sesión: $mensaje",
+
+                                            Toast.LENGTH_LONG
+                                        )
+                                        .show()
+
+
+                                    // No cerramos sesión por un error temporal
+                                    // de conexión o porque Render esté despertando.
+
+                                    currentScreen =
+                                        Screen.Auth
+                                }
+                            )
+                    }
                 }
             )
         }
@@ -1185,6 +1192,10 @@ fun AppScreen() {
                             .orEmpty()
 
 
+                    editandoPerfilExistente =
+                        false
+
+
                     currentScreen =
                         Screen.InitialProfile
                 }
@@ -1200,10 +1211,50 @@ fun AppScreen() {
 
             InitialProfileScreen(
 
+                isSavingProfile =
+                    guardandoPerfil,
+
                 onBack = {
 
-                    currentScreen =
-                        Screen.Auth
+
+                    // ========================================================
+                    // SI VENIMOS DE "EDITAR PERFIL"
+                    // ========================================================
+
+                    if (
+                        editandoPerfilExistente
+                    ) {
+
+                        editandoPerfilExistente =
+                            false
+
+
+                        currentScreen =
+                            Screen.Profile
+
+                    } else {
+
+
+                        // ====================================================
+                        // PERFIL INICIAL NO TERMINADO
+                        // ====================================================
+                        //
+                        // Si el usuario sale de "Queremos conocerte" antes de
+                        // guardar, cerramos Firebase Auth.
+                        //
+                        // Esto evita que al abrir nuevamente la app quede una
+                        // sesión incompleta y salte directo a esta pantalla.
+                        //
+                        // ====================================================
+
+                        FirebaseAuth
+                            .getInstance()
+                            .signOut()
+
+
+                        currentScreen =
+                            Screen.Auth
+                    }
                 },
 
 
@@ -1255,6 +1306,10 @@ fun AppScreen() {
                     // GUARDAR PERFIL
                     // ========================================================
 
+                    guardandoPerfil =
+                        true
+
+
                     PerfilRepository
                         .guardarPerfil(
 
@@ -1267,6 +1322,14 @@ fun AppScreen() {
                             // =================================================
 
                             onSuccess = {
+
+
+                                // --------------------------------------------
+                                // TERMINÓ LA CARGA
+                                // --------------------------------------------
+
+                                guardandoPerfil =
+                                    false
 
 
                                 // --------------------------------------------
@@ -1313,6 +1376,10 @@ fun AppScreen() {
                                     otherChronicDisease
 
 
+                                editandoPerfilExistente =
+                                    false
+
+
                                 // --------------------------------------------
                                 // MENSAJE
                                 // --------------------------------------------
@@ -1344,6 +1411,10 @@ fun AppScreen() {
 
                             onError = {
                                     mensaje ->
+
+
+                                guardandoPerfil =
+                                    false
 
 
                                 Toast
@@ -1455,6 +1526,10 @@ fun AppScreen() {
                 // ============================================================
 
                 onEditProfile = {
+
+                    editandoPerfilExistente =
+                        true
+
 
                     currentScreen =
                         Screen.InitialProfile
@@ -1604,8 +1679,190 @@ fun AppScreen() {
                     // REGRESAR AL INICIO DE AUTENTICACIÓN
                     // ========================================================
 
+                    editandoPerfilExistente =
+                        false
+
+
+                    guardandoPerfil =
+                        false
+
+
                     currentScreen =
                         Screen.Auth
+                },
+
+
+                // ============================================================
+                // ELIMINAR CUENTA
+                // ============================================================
+                //
+                // ProfileScreen muestra la confirmación y el indicador de
+                // carga. Aquí hacemos la eliminación real mediante la API.
+                //
+                // ============================================================
+
+                onDeleteAccount = {
+                        onFinished ->
+
+
+                    PerfilRepository
+                        .eliminarCuenta(
+
+                            // =================================================
+                            // CUENTA ELIMINADA CORRECTAMENTE
+                            // =================================================
+
+                            onSuccess = {
+
+
+                                // --------------------------------------------
+                                // LIMPIAR SESIÓN LOCAL DE FIREBASE
+                                // --------------------------------------------
+                                //
+                                // El backend ya eliminó el usuario de Firebase
+                                // Authentication. Aquí limpiamos la sesión que
+                                // todavía pudiera permanecer en el dispositivo.
+                                //
+                                // --------------------------------------------
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                // --------------------------------------------
+                                // LIMPIAR PERFIL EN MEMORIA
+                                // --------------------------------------------
+
+                                userName =
+                                    ""
+
+
+                                userAge =
+                                    ""
+
+
+                                userGender =
+                                    ""
+
+
+                                userWeight =
+                                    ""
+
+
+                                userHeight =
+                                    ""
+
+
+                                userActivityLevel =
+                                    ""
+
+
+                                userChronicDiseases =
+                                    emptyList()
+
+
+                                userOtherChronicDisease =
+                                    ""
+
+
+                                profileImageUri =
+                                    null
+
+
+                                // --------------------------------------------
+                                // LIMPIAR ESTADOS DE LA APP
+                                // --------------------------------------------
+
+                                sleepSurveyScore =
+                                    null
+
+
+                                medicamentos.clear()
+
+
+                                medicamentoEnEdicion =
+                                    null
+
+
+                                registrosSalud.clear()
+
+
+                                estudiosLaboratorio.clear()
+
+
+                                registroSaludEnEdicion =
+                                    null
+
+
+                                estudioLaboratorioEnEdicion =
+                                    null
+
+
+                                editandoPerfilExistente =
+                                    false
+
+
+                                guardandoPerfil =
+                                    false
+
+
+                                // --------------------------------------------
+                                // DETENER EL INDICADOR DEL DIÁLOGO
+                                // --------------------------------------------
+
+                                onFinished()
+
+
+                                // --------------------------------------------
+                                // AVISAR AL USUARIO
+                                // --------------------------------------------
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Cuenta eliminada correctamente",
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+
+
+                                // --------------------------------------------
+                                // VOLVER A AUTENTICACIÓN
+                                // --------------------------------------------
+
+                                currentScreen =
+                                    Screen.Auth
+                            },
+
+
+                            // =================================================
+                            // ERROR AL ELIMINAR
+                            // =================================================
+
+                            onError = {
+                                    mensaje ->
+
+
+                                // Volvemos a habilitar los botones del diálogo.
+                                onFinished()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible eliminar la cuenta: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 }
             )
         }
@@ -1987,8 +2244,64 @@ fun AppScreen() {
 
                 onMedicamentosClick = {
 
+                    // Abrimos primero la pantalla de medicamentos.
                     currentScreen =
                         Screen.Medicamentos
+
+
+                    // ========================================================
+                    // CARGAR MEDICAMENTOS DESDE FIRESTORE
+                    // ========================================================
+
+                    MedicamentosRepository
+                        .obtenerMedicamentos(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                medicamentos.clear()
+
+                                medicamentos.addAll(
+                                    lista
+                                )
+
+
+                                // Reprogramamos recordatorios usando los datos
+                                // persistidos del usuario.
+
+                                lista.forEach {
+                                        medicamento ->
+
+
+                                    ProgramadorRecordatoriosMedicamento
+                                        .programarMedicamento(
+
+                                            context =
+                                                context,
+
+                                            medicamento =
+                                                medicamento
+                                        )
+                                }
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar los medicamentos: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 },
 
                 onLaboratoriosClick = {
@@ -2058,30 +2371,70 @@ fun AppScreen() {
 
 
                     // ========================================================
-                    // CANCELAR RECORDATORIOS
+                    // ELIMINAR PRIMERO EN LA API
+                    // ========================================================
+                    //
+                    // Solo quitamos el medicamento de la pantalla y cancelamos
+                    // sus alarmas si Firestore confirmó la eliminación.
+                    //
                     // ========================================================
 
-                    ProgramadorRecordatoriosMedicamento
-                        .cancelarMedicamento(
+                    MedicamentosRepository
+                        .eliminarMedicamento(
 
-                            context =
-                                context,
+                            medicamentoId =
+                                medicamento.id,
 
-                            medicamento =
-                                medicamento
+                            onSuccess = {
+
+
+                                ProgramadorRecordatoriosMedicamento
+                                    .cancelarMedicamento(
+
+                                        context =
+                                            context,
+
+                                        medicamento =
+                                            medicamento
+                                    )
+
+
+                                medicamentos.removeAll {
+                                        actual ->
+
+                                    actual.id ==
+                                            medicamento.id
+                                }
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Medicamento eliminado",
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible eliminar el medicamento: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
                         )
-
-
-                    // ========================================================
-                    // ELIMINAR
-                    // ========================================================
-
-                    medicamentos.removeAll {
-                            actual ->
-
-                        actual.id ==
-                                medicamento.id
-                    }
                 }
             )
         }
@@ -2121,6 +2474,42 @@ fun AppScreen() {
 
 
                     // ========================================================
+                    // REQUEST PARA LA API
+                    // ========================================================
+
+                    val medicamentoRequest =
+                        MedicamentoRequest(
+
+                            nombre =
+                                nombre,
+
+                            dosis =
+                                dosis,
+
+                            presentacion =
+                                presentacion,
+
+                            horarios =
+                                horarios,
+
+                            fechaInicio =
+                                fechaInicio,
+
+                            fechaFin =
+                                fechaFin,
+
+                            indicaciones =
+                                indicaciones,
+
+                            recordatorioActivo =
+                                recordatorioActivo,
+
+                            fotoUri =
+                                fotoUri
+                        )
+
+
+                    // ========================================================
                     // EDITAR
                     // ========================================================
 
@@ -2132,90 +2521,139 @@ fun AppScreen() {
                             medicamentoEnEdicion!!
 
 
-                        // ----------------------------------------------------
-                        // CANCELAR ALARMAS ANTERIORES
-                        // ----------------------------------------------------
+                        MedicamentosRepository
+                            .actualizarMedicamento(
 
-                        ProgramadorRecordatoriosMedicamento
-                            .cancelarMedicamento(
-
-                                context =
-                                    context,
+                                medicamentoId =
+                                    medicamentoOriginal.id,
 
                                 medicamento =
-                                    medicamentoOriginal
-                            )
+                                    medicamentoRequest,
+
+                                onSuccess = {
 
 
-                        val indice =
-                            medicamentos
-                                .indexOfFirst {
-                                        medicamento ->
+                                    // ----------------------------------------
+                                    // CANCELAR ALARMAS ANTERIORES
+                                    // ----------------------------------------
 
-                                    medicamento.id ==
-                                            medicamentoOriginal.id
+                                    ProgramadorRecordatoriosMedicamento
+                                        .cancelarMedicamento(
+
+                                            context =
+                                                context,
+
+                                            medicamento =
+                                                medicamentoOriginal
+                                        )
+
+
+                                    // ----------------------------------------
+                                    // ACTUALIZAR LISTA LOCAL
+                                    // ----------------------------------------
+
+                                    val indice =
+                                        medicamentos
+                                            .indexOfFirst {
+                                                    medicamento ->
+
+                                                medicamento.id ==
+                                                        medicamentoOriginal.id
+                                            }
+
+
+                                    if (
+                                        indice != -1
+                                    ) {
+
+                                        val medicamentoActualizado =
+                                            medicamentoOriginal.copy(
+
+                                                nombre =
+                                                    nombre,
+
+                                                dosis =
+                                                    dosis,
+
+                                                presentacion =
+                                                    presentacion,
+
+                                                horarios =
+                                                    horarios,
+
+                                                fechaInicio =
+                                                    fechaInicio,
+
+                                                fechaFin =
+                                                    fechaFin,
+
+                                                indicaciones =
+                                                    indicaciones,
+
+                                                recordatorioActivo =
+                                                    recordatorioActivo,
+
+                                                fotoUri =
+                                                    fotoUri
+                                            )
+
+
+                                        medicamentos[indice] =
+                                            medicamentoActualizado
+
+
+                                        // ------------------------------------
+                                        // PROGRAMAR NUEVAS ALARMAS
+                                        // ------------------------------------
+
+                                        ProgramadorRecordatoriosMedicamento
+                                            .programarMedicamento(
+
+                                                context =
+                                                    context,
+
+                                                medicamento =
+                                                    medicamentoActualizado
+                                            )
+                                    }
+
+
+                                    medicamentoEnEdicion =
+                                        null
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "Medicamento actualizado",
+
+                                            Toast.LENGTH_SHORT
+                                        )
+                                        .show()
+
+
+                                    currentScreen =
+                                        Screen.Medicamentos
+                                },
+
+                                onError = {
+                                        mensaje ->
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "No fue posible actualizar el medicamento: $mensaje",
+
+                                            Toast.LENGTH_LONG
+                                        )
+                                        .show()
                                 }
-
-
-                        if (
-                            indice != -1
-                        ) {
-
-                            val medicamentoActualizado =
-                                medicamentoOriginal.copy(
-
-                                    nombre =
-                                        nombre,
-
-                                    dosis =
-                                        dosis,
-
-                                    presentacion =
-                                        presentacion,
-
-                                    horarios =
-                                        horarios,
-
-                                    fechaInicio =
-                                        fechaInicio,
-
-                                    fechaFin =
-                                        fechaFin,
-
-                                    indicaciones =
-                                        indicaciones,
-
-                                    recordatorioActivo =
-                                        recordatorioActivo,
-
-                                    fotoUri =
-                                        fotoUri
-                                )
-
-
-                            medicamentos[indice] =
-                                medicamentoActualizado
-
-
-                            // ------------------------------------------------
-                            // PROGRAMAR NUEVAS ALARMAS
-                            // ------------------------------------------------
-
-                            ProgramadorRecordatoriosMedicamento
-                                .programarMedicamento(
-
-                                    context =
-                                        context,
-
-                                    medicamento =
-                                        medicamentoActualizado
-                                )
-                        }
-
-
-                        medicamentoEnEdicion =
-                            null
-
+                            )
 
                     } else {
 
@@ -2223,67 +2661,73 @@ fun AppScreen() {
                         // ====================================================
                         // NUEVO MEDICAMENTO
                         // ====================================================
+                        //
+                        // Ya NO generamos el ID con System.currentTimeMillis().
+                        //
+                        // Firestore genera el ID real y la API nos devuelve el
+                        // medicamento completo.
+                        //
+                        // ====================================================
 
-                        val nuevoMedicamento =
-                            Medicamento(
-
-                                id =
-                                    System
-                                        .currentTimeMillis()
-                                        .toString(),
-
-                                nombre =
-                                    nombre,
-
-                                dosis =
-                                    dosis,
-
-                                presentacion =
-                                    presentacion,
-
-                                horarios =
-                                    horarios,
-
-                                fechaInicio =
-                                    fechaInicio,
-
-                                fechaFin =
-                                    fechaFin,
-
-                                indicaciones =
-                                    indicaciones,
-
-                                recordatorioActivo =
-                                    recordatorioActivo,
-
-                                fotoUri =
-                                    fotoUri
-                            )
-
-
-                        medicamentos.add(
-                            nuevoMedicamento
-                        )
-
-
-                        // ----------------------------------------------------
-                        // PROGRAMAR RECORDATORIOS
-                        // ----------------------------------------------------
-
-                        ProgramadorRecordatoriosMedicamento
-                            .programarMedicamento(
-
-                                context =
-                                    context,
+                        MedicamentosRepository
+                            .crearMedicamento(
 
                                 medicamento =
-                                    nuevoMedicamento
+                                    medicamentoRequest,
+
+                                onSuccess = {
+                                        medicamentoCreado ->
+
+
+                                    medicamentos.add(
+                                        medicamentoCreado
+                                    )
+
+
+                                    ProgramadorRecordatoriosMedicamento
+                                        .programarMedicamento(
+
+                                            context =
+                                                context,
+
+                                            medicamento =
+                                                medicamentoCreado
+                                        )
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "Medicamento guardado",
+
+                                            Toast.LENGTH_SHORT
+                                        )
+                                        .show()
+
+
+                                    currentScreen =
+                                        Screen.Medicamentos
+                                },
+
+                                onError = {
+                                        mensaje ->
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "No fue posible guardar el medicamento: $mensaje",
+
+                                            Toast.LENGTH_LONG
+                                        )
+                                        .show()
+                                }
                             )
                     }
-
-
-                    currentScreen =
-                        Screen.Medicamentos
                 }
             )
         }

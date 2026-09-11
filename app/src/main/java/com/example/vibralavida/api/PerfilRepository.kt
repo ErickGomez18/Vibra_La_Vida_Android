@@ -415,4 +415,170 @@ object PerfilRepository {
                 onUnauthorized()
             }
     }
+
+    // ============================================================================
+// ELIMINAR CUENTA
+// ============================================================================
+//
+// DELETE /api/users/me
+//
+// La API elimina:
+//
+// usuarios/{uid}
+// subcolecciones del usuario
+// Firebase Authentication
+//
+// ============================================================================
+
+    fun eliminarCuenta(
+
+        onSuccess: () -> Unit,
+
+        onError: (String) -> Unit
+
+    ) {
+
+        val usuarioActual =
+            FirebaseAuth
+                .getInstance()
+                .currentUser
+
+
+        if (usuarioActual == null) {
+
+            onError(
+                "No existe una sesión activa."
+            )
+
+            return
+        }
+
+
+        // ========================================================================
+        // OBTENER TOKEN
+        // ========================================================================
+
+        usuarioActual
+            .getIdToken(false)
+            .addOnSuccessListener {
+                    tokenResult ->
+
+
+                val token =
+                    tokenResult.token
+
+
+                if (token.isNullOrBlank()) {
+
+                    onError(
+                        "No fue posible obtener el token de sesión."
+                    )
+
+                    return@addOnSuccessListener
+                }
+
+
+                val authorization =
+                    "Bearer $token"
+
+
+                // =================================================================
+                // DELETE /api/users/me
+                // =================================================================
+
+                ApiClient
+                    .perfilApi
+                    .eliminarCuenta(
+
+                        authorization =
+                            authorization
+                    )
+                    .enqueue(
+
+                        object :
+                            Callback<ActualizarPerfilResponse> {
+
+
+                            override fun onResponse(
+
+                                call:
+                                Call<ActualizarPerfilResponse>,
+
+                                response:
+                                Response<ActualizarPerfilResponse>
+
+                            ) {
+
+                                if (
+                                    response.isSuccessful
+                                ) {
+
+                                    val body =
+                                        response.body()
+
+
+                                    if (
+                                        body?.success == true
+                                    ) {
+
+                                        onSuccess()
+
+                                    } else {
+
+                                        onError(
+
+                                            body?.message
+                                                ?: "No fue posible eliminar la cuenta."
+                                        )
+                                    }
+
+                                } else {
+
+                                    onError(
+
+                                        when (
+                                            response.code()
+                                        ) {
+
+                                            401 ->
+                                                "La sesión no es válida."
+
+                                            else ->
+                                                "Error del servidor: ${response.code()}"
+                                        }
+                                    )
+                                }
+                            }
+
+
+                            override fun onFailure(
+
+                                call:
+                                Call<ActualizarPerfilResponse>,
+
+                                throwable:
+                                Throwable
+
+                            ) {
+
+                                onError(
+
+                                    throwable.message
+                                        ?: "No fue posible conectarse con la API."
+                                )
+                            }
+                        }
+                    )
+            }
+            .addOnFailureListener {
+                    error ->
+
+
+                onError(
+
+                    error.message
+                        ?: "No fue posible obtener la sesión."
+                )
+            }
+    }
 }

@@ -44,20 +44,27 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.Person
 
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,9 +113,30 @@ fun ProfileScreen(
     // CERRAR SESIÓN
     // ========================================================================
 
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+
+    // ========================================================================
+    // ELIMINAR CUENTA
+    // ========================================================================
+
+    onDeleteAccount: (
+        onFinished: () -> Unit
+    ) -> Unit
 
 ) {
+
+
+    // ========================================================================
+    // ESTADO PARA ELIMINAR CUENTA
+    // ========================================================================
+
+    var mostrarDialogoEliminar by remember {
+        mutableStateOf(false)
+    }
+
+    var eliminandoCuenta by remember {
+        mutableStateOf(false)
+    }
 
 
     // ========================================================================
@@ -837,23 +865,75 @@ fun ProfileScreen(
                     // =========================================================
                     // CERRAR SESIÓN
                     // =========================================================
-                    //
-                    // Este botón NO cierra Firebase directamente.
-                    //
-                    // Solamente llama al callback onLogout.
-                    //
-                    // MainActivity será quien se encargue de:
-                    //
-                    // FirebaseAuth.signOut()
-                    // limpiar estados
-                    // regresar al inicio
-                    //
+
+                    OutlinedButton(
+
+                        onClick =
+                            onLogout,
+
+                        enabled =
+                            !eliminandoCuenta,
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(
+                                    52.dp
+                                ),
+
+                        shape =
+                            RoundedCornerShape(
+                                18.dp
+                            ),
+
+                        border =
+                            BorderStroke(
+                                width = 1.5.dp,
+                                color = Color(0xFF0F766E)
+                            ),
+
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color.White,
+                                contentColor = Color(0xFF0F766E)
+                            )
+
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(8.dp)
+                        )
+
+                        Text(
+                            text = "Cerrar sesión",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
+
+
+                    // =========================================================
+                    // ELIMINAR CUENTA
                     // =========================================================
 
                     Button(
 
-                        onClick =
-                            onLogout,
+                        onClick = {
+                            mostrarDialogoEliminar = true
+                        },
+
+                        enabled = !eliminandoCuenta,
 
                         modifier =
                             Modifier
@@ -869,52 +949,50 @@ fun ProfileScreen(
 
                         colors =
                             ButtonDefaults.buttonColors(
-
-                                containerColor =
-                                    Color(0xFFDC2626),
-
-                                contentColor =
-                                    Color.White
+                                containerColor = Color(0xFFDC2626),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFFFCA5A5),
+                                disabledContentColor = Color.White
                             )
 
                     ) {
 
+                        if (eliminandoCuenta) {
 
-                        Icon(
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
 
-                            imageVector =
-                                Icons.Default.Logout,
+                            Spacer(
+                                modifier = Modifier.width(8.dp)
+                            )
 
-                            contentDescription =
-                                null,
+                            Text(
+                                text = "Eliminando cuenta...",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
 
-                            modifier =
-                                Modifier.size(
-                                    20.dp
-                                )
-                        )
+                        } else {
 
+                            Icon(
+                                imageVector = Icons.Default.DeleteForever,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
 
-                        Spacer(
+                            Spacer(
+                                modifier = Modifier.width(8.dp)
+                            )
 
-                            modifier =
-                                Modifier.width(
-                                    8.dp
-                                )
-                        )
-
-
-                        Text(
-
-                            text =
-                                "Cerrar sesión",
-
-                            fontSize =
-                                15.sp,
-
-                            fontWeight =
-                                FontWeight.Bold
-                        )
+                            Text(
+                                text = "Eliminar cuenta",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -926,6 +1004,81 @@ fun ProfileScreen(
                     Modifier.height(
                         28.dp
                     )
+            )
+        }
+
+
+        // ====================================================================
+        // DIÁLOGO DE CONFIRMACIÓN
+        // ====================================================================
+
+        if (mostrarDialogoEliminar) {
+
+            AlertDialog(
+
+                onDismissRequest = {
+                    if (!eliminandoCuenta) {
+                        mostrarDialogoEliminar = false
+                    }
+                },
+
+                title = {
+                    Text(
+                        text = "Eliminar cuenta",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+
+                text = {
+                    Text(
+                        text = "Se eliminarán tu cuenta y los datos asociados. Esta acción no se puede deshacer."
+                    )
+                },
+
+                confirmButton = {
+
+                    Button(
+
+                        onClick = {
+
+                            if (!eliminandoCuenta) {
+
+                                eliminandoCuenta = true
+
+                                onDeleteAccount {
+                                    eliminandoCuenta = false
+                                    mostrarDialogoEliminar = false
+                                }
+                            }
+                        },
+
+                        enabled = !eliminandoCuenta,
+
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFDC2626),
+                                contentColor = Color.White
+                            )
+
+                    ) {
+                        Text(text = "Eliminar")
+                    }
+                },
+
+                dismissButton = {
+
+                    OutlinedButton(
+
+                        onClick = {
+                            mostrarDialogoEliminar = false
+                        },
+
+                        enabled = !eliminandoCuenta
+
+                    ) {
+                        Text(text = "Cancelar")
+                    }
+                }
             )
         }
     }

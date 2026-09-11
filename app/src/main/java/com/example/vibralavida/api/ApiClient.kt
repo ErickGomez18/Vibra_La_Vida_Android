@@ -1,7 +1,9 @@
 package com.example.vibralavida.api
 
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 
 // ============================================================================
@@ -12,23 +14,69 @@ object ApiClient {
 
 
     // ========================================================================
-    // URL DE LA API
+    // URL PÚBLICA DE RENDER
     // ========================================================================
     //
-    // Estamos probando desde un CELULAR FÍSICO.
+    // Ya no utilizamos la IP local de la laptop.
     //
-    // Por eso usamos la IPv4 de la laptop dentro de la red Wi-Fi.
+    // Esta URL funciona desde:
     //
-    // Laptop:
-    // 192.168.174.2
-    //
-    // Puerto de la API:
-    // 3001
+    // - Wi-Fi de la escuela
+    // - Wi-Fi de casa
+    // - Datos móviles
+    // - Cualquier otra red
     //
     // ========================================================================
 
     private const val BASE_URL =
-        "http://192.168.174.16:3001/"
+        "https://api-vibra-la-vida.onrender.com/"
+
+
+    // ========================================================================
+    // CLIENTE HTTP
+    // ========================================================================
+    //
+    // Render Free puede "dormir" nuestra API después de un periodo
+    // sin actividad.
+    //
+    // Cuando vuelve a recibir una petición puede tardar varios segundos
+    // en despertar.
+    //
+    // Por eso aumentamos los tiempos de espera.
+    //
+    // ========================================================================
+
+    private val okHttpClient: OkHttpClient by lazy {
+
+        OkHttpClient
+            .Builder()
+
+            // Tiempo máximo para establecer conexión.
+            .connectTimeout(
+                60,
+                TimeUnit.SECONDS
+            )
+
+            // Tiempo máximo esperando una respuesta del servidor.
+            .readTimeout(
+                90,
+                TimeUnit.SECONDS
+            )
+
+            // Tiempo máximo para enviar información.
+            .writeTimeout(
+                60,
+                TimeUnit.SECONDS
+            )
+
+            // Tiempo máximo de toda la llamada.
+            .callTimeout(
+                90,
+                TimeUnit.SECONDS
+            )
+
+            .build()
+    }
 
 
     // ========================================================================
@@ -37,10 +85,16 @@ object ApiClient {
 
     private val retrofit: Retrofit by lazy {
 
-        Retrofit.Builder()
+        Retrofit
+            .Builder()
 
             .baseUrl(
                 BASE_URL
+            )
+
+            // Usamos nuestro cliente con tiempos mayores.
+            .client(
+                okHttpClient
             )
 
             .addConverterFactory(
@@ -59,6 +113,18 @@ object ApiClient {
 
         retrofit.create(
             PerfilApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // MEDICAMENTOS API
+    // ========================================================================
+
+    val medicamentosApi: MedicamentosApi by lazy {
+
+        retrofit.create(
+            MedicamentosApi::class.java
         )
     }
 }

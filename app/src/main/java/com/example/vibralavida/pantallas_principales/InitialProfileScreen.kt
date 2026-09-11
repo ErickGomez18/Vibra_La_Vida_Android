@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.HealthAndSafety
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -104,6 +105,9 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun InitialProfileScreen(
+
+    // Indica si el perfil se está guardando en la API.
+    isSavingProfile: Boolean = false,
 
     // ========================================================================
     // DATOS QUE SE DEVUELVEN AL TERMINAR
@@ -1112,6 +1116,12 @@ fun InitialProfileScreen(
                         onClick = {
 
 
+                            // Mientras se guarda, ignoramos nuevos toques.
+                            if (isSavingProfile) {
+                                return@Button
+                            }
+
+
                             // -------------------------------------------------
                             // VALIDACIÓN GENERAL
                             // -------------------------------------------------
@@ -1191,6 +1201,9 @@ fun InitialProfileScreen(
                             }
                         },
 
+                        enabled =
+                            !isSavingProfile,
+
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(
@@ -1229,17 +1242,66 @@ fun InitialProfileScreen(
                     ) {
 
 
-                        Text(
+                        if (
+                            isSavingProfile
+                        ) {
 
-                            text =
-                                "Ingresar",
+                            Row(
 
-                            fontSize =
-                                16.sp,
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
 
-                            fontWeight =
-                                FontWeight.Bold
-                        )
+                                horizontalArrangement =
+                                    Arrangement.Center
+                            ) {
+
+                                CircularProgressIndicator(
+
+                                    modifier =
+                                        Modifier.height(24.dp),
+
+                                    color =
+                                        Color.White,
+
+                                    strokeWidth =
+                                        2.dp
+                                )
+
+
+                                Spacer(
+
+                                    modifier =
+                                        Modifier.padding(horizontal = 6.dp)
+                                )
+
+
+                                Text(
+
+                                    text =
+                                        "Guardando perfil...",
+
+                                    fontSize =
+                                        16.sp,
+
+                                    fontWeight =
+                                        FontWeight.Bold
+                                )
+                            }
+
+                        } else {
+
+                            Text(
+
+                                text =
+                                    "Ingresar",
+
+                                fontSize =
+                                    16.sp,
+
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+                        }
                     }
 
 
@@ -1251,6 +1313,9 @@ fun InitialProfileScreen(
 
                         onClick =
                             onBack,
+
+                        enabled =
+                            !isSavingProfile,
 
                         modifier =
                             Modifier.fillMaxWidth()
