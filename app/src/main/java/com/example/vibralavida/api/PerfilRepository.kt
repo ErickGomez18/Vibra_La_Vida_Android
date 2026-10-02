@@ -27,6 +27,13 @@ import retrofit2.Response
 
 
 // ============================================================================
+// JSON
+// ============================================================================
+
+import org.json.JSONObject
+
+
+// ============================================================================
 // PERFIL REPOSITORY
 // ============================================================================
 //
@@ -201,6 +208,58 @@ object PerfilRepository {
                         ?: "No fue posible obtener la sesión."
                 )
             }
+    }
+
+
+    // ========================================================================
+    // ACTUALIZAR FOTO DE PERFIL
+    // ========================================================================
+    //
+    // No vuelve a enviar edad, peso, etc.
+    //
+    // El backend usa actualización parcial con merge y conserva
+    // todos los demás datos del perfil.
+    //
+    // ========================================================================
+
+    fun actualizarFotoPerfil(
+
+        fotoPerfilUrl: String,
+
+        onSuccess: () -> Unit,
+
+        onError: (String) -> Unit
+
+    ) {
+
+
+        if (
+            fotoPerfilUrl.isBlank()
+        ) {
+
+            onError(
+                "La URL de la foto está vacía."
+            )
+
+            return
+        }
+
+
+        guardarPerfil(
+
+            perfil =
+                PerfilRequest(
+
+                    fotoPerfilUrl =
+                        fotoPerfilUrl
+                ),
+
+            onSuccess =
+                onSuccess,
+
+            onError =
+                onError
+        )
     }
 
 
@@ -434,9 +493,30 @@ object PerfilRepository {
 
         onSuccess: () -> Unit,
 
-        onError: (String) -> Unit
+        // Debe declararse antes de los callbacks por defecto
+        // que lo utilizan.
+        onError: (String) -> Unit,
+
+        onMultiRoleAccount: (String) -> Unit = { mensaje ->
+
+            onError(
+                mensaje
+            )
+        },
+
+        onUnauthorized: () -> Unit = {
+
+            onError(
+                "La sesión no es válida."
+            )
+        }
 
     ) {
+
+
+        // ====================================================================
+        // USUARIO ACTUAL
+        // ====================================================================
 
         val usuarioActual =
             FirebaseAuth
@@ -444,19 +524,19 @@ object PerfilRepository {
                 .currentUser
 
 
-        if (usuarioActual == null) {
+        if (
+            usuarioActual == null
+        ) {
 
-            onError(
-                "No existe una sesión activa."
-            )
+            onUnauthorized()
 
             return
         }
 
 
-        // ========================================================================
+        // ====================================================================
         // OBTENER TOKEN
-        // ========================================================================
+        // ====================================================================
 
         usuarioActual
             .getIdToken(false)
@@ -468,11 +548,11 @@ object PerfilRepository {
                     tokenResult.token
 
 
-                if (token.isNullOrBlank()) {
+                if (
+                    token.isNullOrBlank()
+                ) {
 
-                    onError(
-                        "No fue posible obtener el token de sesión."
-                    )
+                    onUnauthorized()
 
                     return@addOnSuccessListener
                 }
@@ -482,9 +562,9 @@ object PerfilRepository {
                     "Bearer $token"
 
 
-                // =================================================================
+                // ============================================================
                 // DELETE /api/users/me
-                // =================================================================
+                // ============================================================
 
                 ApiClient
                     .perfilApi
@@ -509,6 +589,11 @@ object PerfilRepository {
 
                             ) {
 
+
+                                // =============================================
+                                // 200 - CUENTA ELIMINADA
+                                // =============================================
+
                                 if (
                                     response.isSuccessful
                                 ) {
@@ -532,24 +617,146 @@ object PerfilRepository {
                                         )
                                     }
 
-                                } else {
 
-                                    onError(
+                                    return
+                                }
 
-                                        when (
-                                            response.code()
-                                        ) {
 
-                                            401 ->
-                                                "La sesión no es válida."
+                                // =============================================
+                                // LEER RESPUESTA DE ERROR DEL BACKEND
+                                // =============================================
+                                //
+                                // Ejemplo:
+                                //
+                                // {
+                                //   "success": false,
+                                //   "code": "MULTI_ROLE_ACCOUNT",
+                                //   "message": "Esta cuenta también tiene..."
+                                // }
+                                //
+                                // =============================================
 
-                                            else ->
-                                                "Error del servidor: ${response.code()}"
+                                val errorTexto =
+                                    try {
+
+                                        response
+                                            .errorBody()
+                                            ?.string()
+                                            .orEmpty()
+
+                                    } catch (
+                                        e: Exception
+                                    ) {
+
+                                        ""
+                                    }
+
+
+                                var codigoBackend =
+                                    ""
+
+
+                                var mensajeBackend =
+                                    ""
+
+
+                                if (
+                                    errorTexto.isNotBlank()
+                                ) {
+
+                                    try {
+
+                                        val json =
+                                            JSONObject(
+                                                errorTexto
+                                            )
+
+
+                                        codigoBackend =
+                                            json.optString(
+                                                "code"
+                                            )
+
+
+                                        mensajeBackend =
+                                            json.optString(
+                                                "message"
+                                            )
+
+                                    } catch (
+                                        e: Exception
+                                    ) {
+
+                                        // Si el backend devolviera algo que no
+                                        // fuera JSON, seguimos usando el código
+                                        // HTTP como respaldo.
+                                    }
+                                }
+
+
+                                // =============================================
+                                // 409 - CUENTA MULTIRROL
+                                // =============================================
+                                //
+                                // IMPORTANTE:
+                                //
+                                // NO cerramos sesión.
+                                // NO limpiamos datos locales.
+                                // NO borramos Firebase Auth.
+                                //
+                                // El backend ya detuvo la eliminación.
+                                //
+                                // =============================================
+
+                                if (
+                                    response.code() == 409 &&
+                                    codigoBackend == "MULTI_ROLE_ACCOUNT"
+                                ) {
+
+                                    onMultiRoleAccount(
+
+                                        mensajeBackend.ifBlank {
+
+                                            "Esta cuenta también está vinculada a un perfil profesional. Para evitar eliminar tu acceso como especialista, no puede eliminarse completamente desde la app."
                                         }
                                     )
+
+
+                                    return
                                 }
+
+
+                                // =============================================
+                                // 401 - SESIÓN INVÁLIDA
+                                // =============================================
+
+                                if (
+                                    response.code() == 401
+                                ) {
+
+                                    onUnauthorized()
+
+                                    return
+                                }
+
+
+                                // =============================================
+                                // OTROS ERRORES
+                                // =============================================
+
+                                onError(
+
+                                    mensajeBackend.ifBlank {
+
+                                        "Error del servidor: ${response.code()}"
+                                    }
+                                )
                             }
 
+
+                            // ================================================
+                            // ERROR DE CONEXIÓN
+                            // ================================================
 
                             override fun onFailure(
 

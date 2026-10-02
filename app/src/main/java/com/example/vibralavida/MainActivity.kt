@@ -142,8 +142,19 @@ import com.google.firebase.auth.FirebaseAuth
 
 import com.example.vibralavida.api.PerfilRepository
 import com.example.vibralavida.api.MedicamentosRepository
+import com.example.vibralavida.api.BitacoraRepository
+import com.example.vibralavida.api.CloudinaryRepository
+import com.example.vibralavida.api.CitasRepository
+import com.example.vibralavida.api.CitasPacienteRepository
+import com.example.vibralavida.api.AdherenciaMedicamentosRepository
+import com.example.vibralavida.api.ResultsRepository
 import com.example.vibralavida.api.modelos.PerfilRequest
 import com.example.vibralavida.api.modelos.MedicamentoRequest
+import com.example.vibralavida.api.modelos.RegistroSaludRequest
+import com.example.vibralavida.api.modelos.EstudioLaboratorioRequest
+import com.example.vibralavida.api.modelos.AdherenciaMedicamentoRequest
+import com.example.vibralavida.api.modelos.RespuestaPacienteCitaRequest
+import com.example.vibralavida.api.modelos.ResultadoRequest
 import com.example.vibralavida.api.modelos.UsuarioPerfil
 
 
@@ -157,6 +168,7 @@ import com.example.vibralavida.pantallas_principales.RegisterScreen
 import com.example.vibralavida.pantallas_principales.HomeScreen
 import com.example.vibralavida.pantallas_principales.ProfileScreen
 import com.example.vibralavida.agenda.MiAgendaScreen
+import com.example.vibralavida.agenda.historial.HistorialAgendaScreen
 
 
 // ============================================================================
@@ -183,6 +195,13 @@ import com.example.vibralavida.trastornos_ritmo.HealthConnectScreen
 
 
 // ============================================================================
+// NUBY - GUÍA INTERACTIVA
+// ============================================================================
+
+import com.example.vibralavida.ia.NubyChatScreen
+
+
+// ============================================================================
 // AGENDA - MEDICAMENTOS
 // ============================================================================
 
@@ -191,6 +210,7 @@ import com.example.vibralavida.agenda.medicamentos.MedicamentosScreen
 import com.example.vibralavida.agenda.medicamentos.AgregarMedicamentoScreen
 import com.example.vibralavida.agenda.medicamentos.NotificacionMedicamento
 import com.example.vibralavida.agenda.medicamentos.ProgramadorRecordatoriosMedicamento
+import com.example.vibralavida.agenda.medicamentos.RegistroAdherenciaMedicamento
 
 
 // ============================================================================
@@ -201,6 +221,27 @@ import com.example.vibralavida.agenda.bitacora.RegistroSalud
 import com.example.vibralavida.agenda.bitacora.EstudioLaboratorio
 import com.example.vibralavida.agenda.bitacora.BitacoraSaludScreen
 import com.example.vibralavida.agenda.bitacora.AgregarBitacoraScreen
+
+
+// ============================================================================
+// AGENDA - CITAS
+// ============================================================================
+
+import com.example.vibralavida.agenda.citas.Cita
+import com.example.vibralavida.agenda.citas.CitasScreen
+import com.example.vibralavida.agenda.citas.NotificacionCita
+import com.example.vibralavida.agenda.citas.ProgramadorRecordatoriosCita
+
+
+// ============================================================================
+// FECHA Y HORA
+// ============================================================================
+
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 
 // ============================================================================
@@ -252,6 +293,16 @@ class MainActivity : ComponentActivity() {
         // ====================================================================
 
         NotificacionMedicamento
+            .crearCanal(
+                this
+            )
+
+
+        // ====================================================================
+        // CANAL DE NOTIFICACIONES DE CITAS
+        // ====================================================================
+
+        NotificacionCita
             .crearCanal(
                 this
             )
@@ -429,6 +480,13 @@ enum class Screen {
 
 
     // ========================================================================
+    // NUBY - GUÍA INTERACTIVA
+    // ========================================================================
+
+    NubyChat,
+
+
+    // ========================================================================
     // AGENDA
     // ========================================================================
 
@@ -440,7 +498,11 @@ enum class Screen {
 
     BitacoraSalud,
 
-    AgregarBitacora
+    AgregarBitacora,
+
+    Citas,
+
+    HistorialAgenda
 }
 
 
@@ -533,6 +595,41 @@ fun AppScreen() {
     var userActivityLevel by remember {
 
         mutableStateOf("")
+    }
+
+
+    // ========================================================================
+    // RESULTADOS DE LA CALCULADORA DE CALORÍAS
+    // ========================================================================
+    //
+    // Se conservan únicamente durante la sesión actual.
+    //
+    // Nuby los recibe de forma selectiva solo cuando la pregunta está
+    // relacionada con alimentación, peso o calorías.
+    //
+    // ========================================================================
+
+    var userLoseCalories by remember {
+
+        mutableStateOf<Int?>(
+            null
+        )
+    }
+
+
+    var userMaintainCalories by remember {
+
+        mutableStateOf<Int?>(
+            null
+        )
+    }
+
+
+    var userGainCalories by remember {
+
+        mutableStateOf<Int?>(
+            null
+        )
     }
 
 
@@ -630,6 +727,24 @@ fun AppScreen() {
 
 
     // ========================================================================
+    // ADHERENCIA DE MEDICAMENTOS
+    // ========================================================================
+    //
+    // Guarda temporalmente en memoria los registros que el paciente reportó
+    // como "tomado" u "omitido".
+    //
+    // La fuente persistente sigue siendo Firestore mediante la API.
+    //
+    // ========================================================================
+
+    val registrosAdherencia =
+        remember {
+
+            mutableStateListOf<RegistroAdherenciaMedicamento>()
+        }
+
+
+    // ========================================================================
     // BITÁCORA DE SALUD
     // ========================================================================
 
@@ -661,6 +776,25 @@ fun AppScreen() {
             null
         )
     }
+
+
+    // ========================================================================
+    // CITAS MÉDICAS
+    // ========================================================================
+    //
+    // Se cargan desde:
+    //
+    // GET /api/citas
+    //
+    // El backend identifica al paciente mediante su token de Firebase.
+    //
+    // ========================================================================
+
+    val citas =
+        remember {
+
+            mutableStateListOf<Cita>()
+        }
 
 
     // ========================================================================
@@ -1368,6 +1502,27 @@ fun AppScreen() {
                                     activityLevel
 
 
+                                // --------------------------------------------
+                                // INVALIDAR RESULTADOS DE CALORÍAS ANTERIORES
+                                // --------------------------------------------
+                                //
+                                // Si cambió el perfil, una estimación anterior
+                                // ya puede no corresponder a los nuevos datos.
+                                //
+                                // --------------------------------------------
+
+                                userLoseCalories =
+                                    null
+
+
+                                userMaintainCalories =
+                                    null
+
+
+                                userGainCalories =
+                                    null
+
+
                                 userChronicDiseases =
                                     chronicDiseases
 
@@ -1476,7 +1631,61 @@ fun AppScreen() {
 
                     currentScreen =
                         Screen.MiAgenda
+                },
+
+
+                // ============================================================
+                // NUBY - GUÍA INTERACTIVA
+                // ============================================================
+
+                onNubyClick = {
+
+                    currentScreen =
+                        Screen.NubyChat
                 }
+
+
+            )
+        }
+
+
+        // ====================================================================
+        // NUBY - GUÍA INTERACTIVA
+        // ====================================================================
+
+        Screen.NubyChat -> {
+
+            NubyChatScreen(
+
+                onBack = {
+
+                    currentScreen =
+                        Screen.Home
+                },
+
+                userAge =
+                    userAge,
+
+                userGender =
+                    userGender,
+
+                userWeight =
+                    userWeight,
+
+                userHeight =
+                    userHeight,
+
+                userActivityLevel =
+                    userActivityLevel,
+
+                userLoseCalories =
+                    userLoseCalories,
+
+                userMaintainCalories =
+                    userMaintainCalories,
+
+                userGainCalories =
+                    userGainCalories
             )
         }
 
@@ -1599,6 +1808,18 @@ fun AppScreen() {
                         ""
 
 
+                    userLoseCalories =
+                        null
+
+
+                    userMaintainCalories =
+                        null
+
+
+                    userGainCalories =
+                        null
+
+
                     userChronicDiseases =
                         emptyList()
 
@@ -1641,6 +1862,9 @@ fun AppScreen() {
                         null
 
 
+                    registrosAdherencia.clear()
+
+
                     // ========================================================
                     // BITÁCORA
                     // ========================================================
@@ -1657,6 +1881,13 @@ fun AppScreen() {
 
                     estudioLaboratorioEnEdicion =
                         null
+
+
+                    // ========================================================
+                    // CITAS
+                    // ========================================================
+
+                    citas.clear()
 
 
                     // ========================================================
@@ -1717,12 +1948,6 @@ fun AppScreen() {
 
                                 // --------------------------------------------
                                 // LIMPIAR SESIÓN LOCAL DE FIREBASE
-                                // --------------------------------------------
-                                //
-                                // El backend ya eliminó el usuario de Firebase
-                                // Authentication. Aquí limpiamos la sesión que
-                                // todavía pudiera permanecer en el dispositivo.
-                                //
                                 // --------------------------------------------
 
                                 FirebaseAuth
@@ -1785,6 +2010,9 @@ fun AppScreen() {
                                     null
 
 
+                                registrosAdherencia.clear()
+
+
                                 registrosSalud.clear()
 
 
@@ -1799,6 +2027,9 @@ fun AppScreen() {
                                     null
 
 
+                                citas.clear()
+
+
                                 editandoPerfilExistente =
                                     false
 
@@ -1808,15 +2039,11 @@ fun AppScreen() {
 
 
                                 // --------------------------------------------
-                                // DETENER EL INDICADOR DEL DIÁLOGO
+                                // TERMINAR CARGA
                                 // --------------------------------------------
 
                                 onFinished()
 
-
-                                // --------------------------------------------
-                                // AVISAR AL USUARIO
-                                // --------------------------------------------
 
                                 Toast
                                     .makeText(
@@ -1830,12 +2057,73 @@ fun AppScreen() {
                                     .show()
 
 
-                                // --------------------------------------------
-                                // VOLVER A AUTENTICACIÓN
-                                // --------------------------------------------
-
                                 currentScreen =
                                     Screen.Auth
+                            },
+
+
+                            // =================================================
+                            // CUENTA MULTIRROL
+                            // =================================================
+                            //
+                            // El backend detectó que esta persona también
+                            // tiene acceso como especialista.
+                            //
+                            // NO cerramos sesión.
+                            // NO borramos datos locales.
+                            // NO cambiamos de pantalla.
+                            //
+                            // =================================================
+
+                            onMultiRoleAccount = {
+                                    mensaje ->
+
+
+                                onFinished()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        mensaje,
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            },
+
+
+                            // =================================================
+                            // SESIÓN INVÁLIDA
+                            // =================================================
+
+                            onUnauthorized = {
+
+
+                                onFinished()
+
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+
+
+                                currentScreen =
+                                    Screen.Login
                             },
 
 
@@ -1847,7 +2135,6 @@ fun AppScreen() {
                                     mensaje ->
 
 
-                                // Volvemos a habilitar los botones del diálogo.
                                 onFinished()
 
 
@@ -2150,6 +2437,132 @@ fun AppScreen() {
 
                     currentScreen =
                         Screen.Profile
+                },
+
+
+                // ============================================================
+                // GUARDAR RESULTADO DEL IMC
+                // ============================================================
+                //
+                // CalculatorScreens calcula y muestra el resultado como antes.
+                // Además, nos entrega aquí los datos para guardarlos mediante
+                // POST /api/results usando el token de Firebase del usuario.
+                //
+                // El backend lo almacena en:
+                // usuarios/{uid}/resultados/{id}
+                //
+                // ============================================================
+
+                onImcCalculated = {
+                        edad,
+                        genero,
+                        pesoKg,
+                        alturaCm,
+                        imc,
+                        categoria,
+                        descripcion ->
+
+
+                    val resultadoRequest =
+                        ResultadoRequest(
+
+                            tipo =
+                                "imc",
+
+                            categoria =
+                                categoria,
+
+                            puntaje =
+                                imc,
+
+                            clasificacion =
+                                categoria,
+
+                            descripcion =
+                                descripcion,
+
+                            respuestas =
+                                null,
+
+                            datosExtra =
+                                mapOf(
+                                    "nombreHerramienta" to
+                                            "Calculadora de IMC",
+                                    "edad" to
+                                            edad,
+                                    "genero" to
+                                            genero,
+                                    "pesoKg" to
+                                            pesoKg,
+                                    "alturaCm" to
+                                            alturaCm,
+                                    "imc" to
+                                            imc,
+                                    "categoria" to
+                                            categoria
+                                )
+                        )
+
+
+                    ResultsRepository
+                        .guardarResultado(
+
+                            resultado =
+                                resultadoRequest,
+
+                            onSuccess = {
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Resultado de IMC guardado",
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onUnauthorized = {
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+
+
+                                currentScreen =
+                                    Screen.Login
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "El IMC se calculó, pero no pudo guardarse: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 }
             )
         }
@@ -2178,6 +2591,29 @@ fun AppScreen() {
 
                     currentScreen =
                         Screen.Profile
+                },
+
+
+                // ============================================================
+                // GUARDAR RESULTADOS PARA NUBY
+                // ============================================================
+
+                onCaloriesCalculated = {
+                        lose,
+                        maintain,
+                        gain ->
+
+
+                    userLoseCalories =
+                        lose
+
+
+                    userMaintainCalories =
+                        maintain
+
+
+                    userGainCalories =
+                        gain
                 }
             )
         }
@@ -2302,29 +2738,830 @@ fun AppScreen() {
                                     .show()
                             }
                         )
+
+
+                    // ========================================================
+                    // CARGAR ADHERENCIA DE MEDICAMENTOS
+                    // ========================================================
+                    //
+                    // Recuperamos lo que el paciente ya reportó anteriormente
+                    // para que al volver a abrir la pantalla se mantenga el
+                    // estado "Tomado" u "Omitido".
+                    //
+                    // ========================================================
+
+                    AdherenciaMedicamentosRepository
+                        .obtenerHistorial(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                registrosAdherencia.clear()
+
+
+                                registrosAdherencia.addAll(
+                                    lista
+                                )
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar el historial de medicamentos: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 },
 
                 onLaboratoriosClick = {
 
                     currentScreen =
                         Screen.BitacoraSalud
+
+
+                    // ========================================================
+                    // CARGAR MEDICIONES DESDE FIRESTORE
+                    // ========================================================
+
+                    BitacoraRepository
+                        .obtenerRegistros(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                registrosSalud.clear()
+
+                                registrosSalud.addAll(
+                                    lista
+                                )
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar las mediciones: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+
+
+                    // ========================================================
+                    // CARGAR LABORATORIOS DESDE FIRESTORE
+                    // ========================================================
+
+                    BitacoraRepository
+                        .obtenerLaboratorios(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                estudiosLaboratorio.clear()
+
+                                estudiosLaboratorio.addAll(
+                                    lista
+                                )
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar los laboratorios: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 },
 
                 onCitasClick = {
 
-                    println(
-                        "Abrir citas"
-                    )
+                    // ========================================================
+                    // ABRIR PANTALLA DE CITAS
+                    // ========================================================
+
+                    currentScreen =
+                        Screen.Citas
+
+
+                    // ========================================================
+                    // CARGAR CITAS DESDE LA API
+                    // ========================================================
+                    //
+                    // La app móvil solamente consulta las citas del paciente.
+                    // La creación/edición se realiza desde el panel web.
+                    //
+                    // ========================================================
+
+                    CitasRepository
+                        .obtenerCitas(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                citas.clear()
+
+
+                                citas.addAll(
+                                    lista
+                                )
+
+
+                                // --------------------------------------------
+                                // PROGRAMAR RECORDATORIOS LOCALES
+                                // --------------------------------------------
+
+                                ProgramadorRecordatoriosCita
+                                    .programarCitas(
+
+                                        context =
+                                            context,
+
+                                        citas =
+                                            lista
+                                    )
+                            },
+
+                            onUnauthorized = {
+
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+
+
+                                currentScreen =
+                                    Screen.Login
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar las citas: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 },
 
                 onHistorialClick = {
 
-                    println(
-                        "Abrir historial"
-                    )
+                    // ========================================================
+                    // ABRIR HISTORIAL DE AGENDA
+                    // ========================================================
+
+                    currentScreen =
+                        Screen.HistorialAgenda
+
+
+                    // ========================================================
+                    // CARGAR ADHERENCIA DE MEDICAMENTOS
+                    // ========================================================
+
+                    AdherenciaMedicamentosRepository
+                        .obtenerHistorial(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                registrosAdherencia.clear()
+
+
+                                registrosAdherencia.addAll(
+                                    lista
+                                )
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar el historial de medicamentos: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+
+
+                    // ========================================================
+                    // CARGAR CITAS
+                    // ========================================================
+
+                    CitasRepository
+                        .obtenerCitas(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                citas.clear()
+
+
+                                citas.addAll(
+                                    lista
+                                )
+
+
+                                // --------------------------------------------
+                                // PROGRAMAR RECORDATORIOS LOCALES
+                                // --------------------------------------------
+
+                                ProgramadorRecordatoriosCita
+                                    .programarCitas(
+
+                                        context =
+                                            context,
+
+                                        citas =
+                                            lista
+                                    )
+                            },
+
+                            onUnauthorized = {
+
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+
+
+                                currentScreen =
+                                    Screen.Login
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar el historial de citas: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+
+
+                    // ========================================================
+                    // CARGAR MEDICIONES DE SALUD
+                    // ========================================================
+
+                    BitacoraRepository
+                        .obtenerRegistros(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                registrosSalud.clear()
+
+
+                                registrosSalud.addAll(
+                                    lista
+                                )
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar las mediciones del historial: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+
+
+                    // ========================================================
+                    // CARGAR LABORATORIOS
+                    // ========================================================
+
+                    BitacoraRepository
+                        .obtenerLaboratorios(
+
+                            onSuccess = {
+                                    lista ->
+
+
+                                estudiosLaboratorio.clear()
+
+
+                                estudiosLaboratorio.addAll(
+                                    lista
+                                )
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible cargar los laboratorios del historial: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 }
             )
         }
+
+
+
+        // ====================================================================
+        // HISTORIAL DE AGENDA
+        // ====================================================================
+
+        Screen.HistorialAgenda -> {
+
+            HistorialAgendaScreen(
+
+                registrosAdherencia =
+                    registrosAdherencia,
+
+                citas =
+                    citas,
+
+                registrosSalud =
+                    registrosSalud,
+
+                estudiosLaboratorio =
+                    estudiosLaboratorio,
+
+                onBack = {
+
+                    currentScreen =
+                        Screen.MiAgenda
+                }
+            )
+        }
+
+
+        // ====================================================================
+        // CITAS MÉDICAS
+        // ====================================================================
+
+        Screen.Citas -> {
+
+            CitasScreen(
+
+                citas =
+                    citas,
+
+                onBack = {
+
+                    currentScreen =
+                        Screen.MiAgenda
+                },
+
+
+                // ============================================================
+                // CONFIRMAR ASISTENCIA
+                // ============================================================
+                //
+                // El paciente confirma que planea asistir a la cita.
+                //
+                // Esto NO cambia directamente el estado general de la cita.
+                // Se guarda por separado en "estadoPaciente".
+                //
+                // ============================================================
+
+                onConfirmarAsistencia = {
+                        cita ->
+
+
+                    val request =
+                        RespuestaPacienteCitaRequest(
+
+                            accion =
+                                "confirmar"
+                        )
+
+
+                    CitasPacienteRepository
+                        .actualizarRespuesta(
+
+                            citaId =
+                                cita.id,
+
+                            request =
+                                request,
+
+                            onSuccess = {
+                                    citaActualizada,
+                                    mensaje ->
+
+
+                                // --------------------------------------------
+                                // ACTUALIZAR LISTA LOCAL
+                                // --------------------------------------------
+
+                                val indice =
+                                    citas.indexOfFirst {
+                                            actual ->
+
+                                        actual.id ==
+                                                citaActualizada.id
+                                    }
+
+
+                                if (
+                                    indice != -1
+                                ) {
+
+                                    citas[indice] =
+                                        citaActualizada
+                                }
+
+
+                                // --------------------------------------------
+                                // AVISAR AL PACIENTE
+                                // --------------------------------------------
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        mensaje,
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onUnauthorized = {
+
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+
+
+                                currentScreen =
+                                    Screen.Login
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible confirmar tu asistencia: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+                },
+
+
+                // ============================================================
+                // SOLICITAR REAGENDACIÓN
+                // ============================================================
+                //
+                // El paciente propone una nueva fecha y hora.
+                //
+                // La cita original NO se modifica automáticamente.
+                // El profesional debe revisar la solicitud.
+                //
+                // ============================================================
+
+                onSolicitarReagendacion = {
+                        cita,
+                        fecha,
+                        hora,
+                        motivo ->
+
+
+                    val request =
+                        RespuestaPacienteCitaRequest(
+
+                            accion =
+                                "reagendar",
+
+                            motivo =
+                                motivo,
+
+                            fechaSolicitada =
+                                fecha,
+
+                            horaSolicitada =
+                                hora
+                        )
+
+
+                    CitasPacienteRepository
+                        .actualizarRespuesta(
+
+                            citaId =
+                                cita.id,
+
+                            request =
+                                request,
+
+                            onSuccess = {
+                                    citaActualizada,
+                                    mensaje ->
+
+
+                                // --------------------------------------------
+                                // ACTUALIZAR LISTA LOCAL
+                                // --------------------------------------------
+
+                                val indice =
+                                    citas.indexOfFirst {
+                                            actual ->
+
+                                        actual.id ==
+                                                citaActualizada.id
+                                    }
+
+
+                                if (
+                                    indice != -1
+                                ) {
+
+                                    citas[indice] =
+                                        citaActualizada
+                                }
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        mensaje,
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onUnauthorized = {
+
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+
+
+                                currentScreen =
+                                    Screen.Login
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible enviar la solicitud de reagendación: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+                },
+
+
+                // ============================================================
+                // SOLICITAR CANCELACIÓN
+                // ============================================================
+                //
+                // La cita NO se cancela automáticamente.
+                //
+                // Guardamos una solicitud para que el profesional la revise.
+                //
+                // ============================================================
+
+                onSolicitarCancelacion = {
+                        cita,
+                        motivo ->
+
+
+                    val request =
+                        RespuestaPacienteCitaRequest(
+
+                            accion =
+                                "cancelar",
+
+                            motivo =
+                                motivo
+                        )
+
+
+                    CitasPacienteRepository
+                        .actualizarRespuesta(
+
+                            citaId =
+                                cita.id,
+
+                            request =
+                                request,
+
+                            onSuccess = {
+                                    citaActualizada,
+                                    mensaje ->
+
+
+                                // --------------------------------------------
+                                // ACTUALIZAR LISTA LOCAL
+                                // --------------------------------------------
+
+                                val indice =
+                                    citas.indexOfFirst {
+                                            actual ->
+
+                                        actual.id ==
+                                                citaActualizada.id
+                                    }
+
+
+                                if (
+                                    indice != -1
+                                ) {
+
+                                    citas[indice] =
+                                        citaActualizada
+                                }
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        mensaje,
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onUnauthorized = {
+
+
+                                FirebaseAuth
+                                    .getInstance()
+                                    .signOut()
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+
+
+                                currentScreen =
+                                    Screen.Login
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible enviar la solicitud de cancelación: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+                }
+            )
+        }
+
 
 
         // ====================================================================
@@ -2337,6 +3574,9 @@ fun AppScreen() {
 
                 medicamentos =
                     medicamentos,
+
+                registrosAdherencia =
+                    registrosAdherencia,
 
                 onBack = {
 
@@ -2429,6 +3669,205 @@ fun AppScreen() {
                                         context,
 
                                         "No fue posible eliminar el medicamento: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
+                },
+
+
+                // ============================================================
+                // REGISTRAR ADHERENCIA
+                // ============================================================
+                //
+                // El paciente reporta una dosis como:
+                //
+                // - tomado
+                // - omitido
+                //
+                // Este registro es un AUTORREPORTE. No confirma clínicamente
+                // que el medicamento haya sido ingerido.
+                //
+                // ============================================================
+
+                onRegistrarAdherencia = {
+                        medicamento,
+                        horario,
+                        estado ->
+
+
+                    // ========================================================
+                    // FECHA ACTUAL
+                    // ========================================================
+
+                    val fechaActual =
+                        LocalDate.now()
+
+
+                    val formatoFecha =
+                        DateTimeFormatter.ofPattern(
+                            "dd/MM/yyyy"
+                        )
+
+
+                    val formatoHora =
+                        DateTimeFormatter.ofPattern(
+                            "HH:mm"
+                        )
+
+
+                    val fechaTexto =
+                        fechaActual.format(
+                            formatoFecha
+                        )
+
+
+                    // ========================================================
+                    // CONVERTIR FECHA + HORARIO A MILISEGUNDOS
+                    // ========================================================
+
+                    val fechaHoraProgramadaMs =
+                        try {
+
+                            val horaLocal =
+                                LocalTime.parse(
+                                    horario,
+                                    formatoHora
+                                )
+
+
+                            LocalDateTime
+                                .of(
+                                    fechaActual,
+                                    horaLocal
+                                )
+                                .atZone(
+                                    ZoneId.systemDefault()
+                                )
+                                .toInstant()
+                                .toEpochMilli()
+
+                        } catch (
+                            e: Exception
+                        ) {
+
+                            0L
+                        }
+
+
+                    // ========================================================
+                    // REQUEST
+                    // ========================================================
+
+                    val request =
+                        AdherenciaMedicamentoRequest(
+
+                            medicamentoId =
+                                medicamento.id,
+
+                            nombreMedicamento =
+                                medicamento.nombre,
+
+                            dosis =
+                                medicamento.dosis,
+
+                            fecha =
+                                fechaTexto,
+
+                            horarioProgramado =
+                                horario,
+
+                            fechaHoraProgramadaMs =
+                                fechaHoraProgramadaMs,
+
+                            estado =
+                                estado
+                        )
+
+
+                    // ========================================================
+                    // GUARDAR EN LA API
+                    // ========================================================
+
+                    AdherenciaMedicamentosRepository
+                        .registrarEstado(
+
+                            request =
+                                request,
+
+                            onSuccess = {
+                                    registroGuardado ->
+
+
+                                // --------------------------------------------
+                                // BUSCAR SI YA EXISTÍA ESTE REGISTRO
+                                // --------------------------------------------
+                                //
+                                // Como backend usa un ID determinístico,
+                                // cambiar de "tomado" a "omitido" actualiza
+                                // la misma dosis y no crea duplicados.
+                                //
+                                // --------------------------------------------
+
+                                val indice =
+                                    registrosAdherencia
+                                        .indexOfFirst {
+                                                actual ->
+
+                                            actual.id ==
+                                                    registroGuardado.id
+                                        }
+
+
+                                if (
+                                    indice >= 0
+                                ) {
+
+                                    registrosAdherencia[indice] =
+                                        registroGuardado
+
+                                } else {
+
+                                    registrosAdherencia.add(
+                                        registroGuardado
+                                    )
+                                }
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        if (
+                                            estado ==
+                                            "tomado"
+                                        ) {
+
+                                            "Medicamento reportado como tomado"
+
+                                        } else {
+
+                                            "Medicamento reportado como omitido"
+                                        },
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible registrar el medicamento: $mensaje",
 
                                         Toast.LENGTH_LONG
                                     )
@@ -2787,12 +4226,51 @@ fun AppScreen() {
                         registro ->
 
 
-                    registrosSalud.removeAll {
-                            actual ->
+                    BitacoraRepository
+                        .eliminarRegistro(
 
-                        actual.id ==
-                                registro.id
-                    }
+                            registroId =
+                                registro.id,
+
+                            onSuccess = {
+
+
+                                registrosSalud.removeAll {
+                                        actual ->
+
+                                    actual.id ==
+                                            registro.id
+                                }
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Medición eliminada",
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible eliminar la medición: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 },
 
                 onEditarEstudio = {
@@ -2815,12 +4293,51 @@ fun AppScreen() {
                         estudio ->
 
 
-                    estudiosLaboratorio.removeAll {
-                            actual ->
+                    BitacoraRepository
+                        .eliminarLaboratorio(
 
-                        actual.id ==
-                                estudio.id
-                    }
+                            estudioId =
+                                estudio.id,
+
+                            onSuccess = {
+
+
+                                estudiosLaboratorio.removeAll {
+                                        actual ->
+
+                                    actual.id ==
+                                            estudio.id
+                                }
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "Estudio eliminado",
+
+                                        Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                            },
+
+                            onError = {
+                                    mensaje ->
+
+
+                                Toast
+                                    .makeText(
+
+                                        context,
+
+                                        "No fue posible eliminar el estudio: $mensaje",
+
+                                        Toast.LENGTH_LONG
+                                    )
+                                    .show()
+                            }
+                        )
                 }
             )
         }
@@ -2871,6 +4388,39 @@ fun AppScreen() {
 
 
                     // ========================================================
+                    // REQUEST PARA LA API
+                    // ========================================================
+
+                    val registroRequest =
+                        RegistroSaludRequest(
+
+                            tipo =
+                                tipo,
+
+                            fecha =
+                                fecha,
+
+                            hora =
+                                hora,
+
+                            valorPrincipal =
+                                valorPrincipal,
+
+                            valorSecundario =
+                                valorSecundario,
+
+                            unidad =
+                                unidad,
+
+                            condicion =
+                                condicion,
+
+                            observaciones =
+                                observaciones
+                        )
+
+
+                    // ========================================================
                     // EDITAR
                     // ========================================================
 
@@ -2882,53 +4432,102 @@ fun AppScreen() {
                             registroSaludEnEdicion!!
 
 
-                        val indice =
-                            registrosSalud
-                                .indexOfFirst {
-                                        registro ->
+                        BitacoraRepository
+                            .actualizarRegistro(
 
-                                    registro.id ==
-                                            original.id
+                                registroId =
+                                    original.id,
+
+                                registro =
+                                    registroRequest,
+
+                                onSuccess = {
+
+
+                                    val indice =
+                                        registrosSalud
+                                            .indexOfFirst {
+                                                    registro ->
+
+                                                registro.id ==
+                                                        original.id
+                                            }
+
+
+                                    if (
+                                        indice != -1
+                                    ) {
+
+                                        registrosSalud[indice] =
+                                            original.copy(
+
+                                                tipo =
+                                                    tipo,
+
+                                                fecha =
+                                                    fecha,
+
+                                                hora =
+                                                    hora,
+
+                                                valorPrincipal =
+                                                    valorPrincipal,
+
+                                                valorSecundario =
+                                                    valorSecundario,
+
+                                                unidad =
+                                                    unidad,
+
+                                                condicion =
+                                                    condicion,
+
+                                                observaciones =
+                                                    observaciones
+                                            )
+                                    }
+
+
+                                    registroSaludEnEdicion =
+                                        null
+
+
+                                    estudioLaboratorioEnEdicion =
+                                        null
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "Medición actualizada",
+
+                                            Toast.LENGTH_SHORT
+                                        )
+                                        .show()
+
+
+                                    currentScreen =
+                                        Screen.BitacoraSalud
+                                },
+
+                                onError = {
+                                        mensaje ->
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "No fue posible actualizar la medición: $mensaje",
+
+                                            Toast.LENGTH_LONG
+                                        )
+                                        .show()
                                 }
-
-
-                        if (
-                            indice != -1
-                        ) {
-
-                            registrosSalud[indice] =
-                                original.copy(
-
-                                    tipo =
-                                        tipo,
-
-                                    fecha =
-                                        fecha,
-
-                                    hora =
-                                        hora,
-
-                                    valorPrincipal =
-                                        valorPrincipal,
-
-                                    valorSecundario =
-                                        valorSecundario,
-
-                                    unidad =
-                                        unidad,
-
-                                    condicion =
-                                        condicion,
-
-                                    observaciones =
-                                        observaciones
-                                )
-                        }
-
-
-                        registroSaludEnEdicion =
-                            null
-
+                            )
 
                     } else {
 
@@ -2937,52 +4536,62 @@ fun AppScreen() {
                         // NUEVA MEDICIÓN
                         // ====================================================
 
-                        val nuevoRegistro =
-                            RegistroSalud(
+                        BitacoraRepository
+                            .crearRegistro(
 
-                                id =
-                                    System
-                                        .currentTimeMillis()
-                                        .toString(),
+                                registro =
+                                    registroRequest,
 
-                                tipo =
-                                    tipo,
+                                onSuccess = {
+                                        registroCreado ->
 
-                                fecha =
-                                    fecha,
 
-                                hora =
-                                    hora,
+                                    registrosSalud.add(
+                                        registroCreado
+                                    )
 
-                                valorPrincipal =
-                                    valorPrincipal,
 
-                                valorSecundario =
-                                    valorSecundario,
+                                    registroSaludEnEdicion =
+                                        null
 
-                                unidad =
-                                    unidad,
 
-                                condicion =
-                                    condicion,
+                                    estudioLaboratorioEnEdicion =
+                                        null
 
-                                observaciones =
-                                    observaciones
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "Medición guardada",
+
+                                            Toast.LENGTH_SHORT
+                                        )
+                                        .show()
+
+
+                                    currentScreen =
+                                        Screen.BitacoraSalud
+                                },
+
+                                onError = {
+                                        mensaje ->
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "No fue posible guardar la medición: $mensaje",
+
+                                            Toast.LENGTH_LONG
+                                        )
+                                        .show()
+                                }
                             )
-
-
-                        registrosSalud.add(
-                            nuevoRegistro
-                        )
                     }
-
-
-                    estudioLaboratorioEnEdicion =
-                        null
-
-
-                    currentScreen =
-                        Screen.BitacoraSalud
                 },
 
 
@@ -3000,73 +4609,64 @@ fun AppScreen() {
 
 
                     // ========================================================
-                    // EDITAR
+                    // ARCHIVOS DEL ESTUDIO
+                    // ========================================================
+                    //
+                    // En edición podemos tener dos tipos de valores:
+                    //
+                    // 1. URL de Cloudinary:
+                    //    https://res.cloudinary.com/...
+                    //
+                    // 2. Archivo nuevo del teléfono:
+                    //    content://...
+                    //
+                    // Las URL existentes NO se vuelven a subir.
+                    // Solamente mandamos a Cloudinary los archivos locales.
+                    //
                     // ========================================================
 
-                    if (
-                        estudioLaboratorioEnEdicion != null
-                    ) {
+                    val archivosYaSubidos =
+                        archivosUri.filter {
+                                archivo ->
 
-                        val original =
-                            estudioLaboratorioEnEdicion!!
-
-
-                        val indice =
-                            estudiosLaboratorio
-                                .indexOfFirst {
-                                        estudio ->
-
-                                    estudio.id ==
-                                            original.id
-                                }
-
-
-                        if (
-                            indice != -1
-                        ) {
-
-                            estudiosLaboratorio[indice] =
-                                original.copy(
-
-                                    tipoEstudio =
-                                        tipoEstudio,
-
-                                    nombrePersonalizado =
-                                        nombrePersonalizado,
-
-                                    fecha =
-                                        fecha,
-
-                                    laboratorio =
-                                        laboratorio,
-
-                                    archivosUri =
-                                        archivosUri,
-
-                                    observaciones =
-                                        observaciones
-                                )
+                            archivo.startsWith(
+                                "https://"
+                            ) ||
+                                    archivo.startsWith(
+                                        "http://"
+                                    )
                         }
 
 
-                        estudioLaboratorioEnEdicion =
-                            null
+                    val archivosLocales =
+                        archivosUri.filter {
+                                archivo ->
+
+                            !archivo.startsWith(
+                                "https://"
+                            ) &&
+                                    !archivo.startsWith(
+                                        "http://"
+                                    )
+                        }
 
 
-                    } else {
+                    // ========================================================
+                    // FUNCIÓN LOCAL PARA GUARDAR EN FIRESTORE
+                    // ========================================================
+                    //
+                    // Esta función se ejecuta DESPUÉS de que los archivos
+                    // locales ya fueron convertidos en URL de Cloudinary.
+                    //
+                    // ========================================================
+
+                    fun guardarEstudioConUrls(
+                        urlsFinales: List<String>
+                    ) {
 
 
-                        // ====================================================
-                        // NUEVO LABORATORIO
-                        // ====================================================
-
-                        val nuevoEstudio =
-                            EstudioLaboratorio(
-
-                                id =
-                                    System
-                                        .currentTimeMillis()
-                                        .toString(),
+                        val estudioRequest =
+                            EstudioLaboratorioRequest(
 
                                 tipoEstudio =
                                     tipoEstudio,
@@ -3081,25 +4681,262 @@ fun AppScreen() {
                                     laboratorio,
 
                                 archivosUri =
-                                    archivosUri,
+                                    urlsFinales,
 
                                 observaciones =
                                     observaciones
                             )
 
 
-                        estudiosLaboratorio.add(
-                            nuevoEstudio
-                        )
+                        // ====================================================
+                        // EDITAR ESTUDIO
+                        // ====================================================
+
+                        if (
+                            estudioLaboratorioEnEdicion != null
+                        ) {
+
+                            val original =
+                                estudioLaboratorioEnEdicion!!
+
+
+                            BitacoraRepository
+                                .actualizarLaboratorio(
+
+                                    estudioId =
+                                        original.id,
+
+                                    estudio =
+                                        estudioRequest,
+
+                                    onSuccess = {
+
+
+                                        val indice =
+                                            estudiosLaboratorio
+                                                .indexOfFirst {
+                                                        estudio ->
+
+                                                    estudio.id ==
+                                                            original.id
+                                                }
+
+
+                                        if (
+                                            indice != -1
+                                        ) {
+
+                                            estudiosLaboratorio[indice] =
+                                                original.copy(
+
+                                                    tipoEstudio =
+                                                        tipoEstudio,
+
+                                                    nombrePersonalizado =
+                                                        nombrePersonalizado,
+
+                                                    fecha =
+                                                        fecha,
+
+                                                    laboratorio =
+                                                        laboratorio,
+
+                                                    archivosUri =
+                                                        urlsFinales,
+
+                                                    observaciones =
+                                                        observaciones
+                                                )
+                                        }
+
+
+                                        estudioLaboratorioEnEdicion =
+                                            null
+
+
+                                        registroSaludEnEdicion =
+                                            null
+
+
+                                        Toast
+                                            .makeText(
+
+                                                context,
+
+                                                "Estudio actualizado",
+
+                                                Toast.LENGTH_SHORT
+                                            )
+                                            .show()
+
+
+                                        currentScreen =
+                                            Screen.BitacoraSalud
+                                    },
+
+                                    onError = {
+                                            mensaje ->
+
+
+                                        Toast
+                                            .makeText(
+
+                                                context,
+
+                                                "No fue posible actualizar el estudio: $mensaje",
+
+                                                Toast.LENGTH_LONG
+                                            )
+                                            .show()
+                                    }
+                                )
+
+                        } else {
+
+
+                            // ================================================
+                            // NUEVO ESTUDIO
+                            // ================================================
+
+                            BitacoraRepository
+                                .crearLaboratorio(
+
+                                    estudio =
+                                        estudioRequest,
+
+                                    onSuccess = {
+                                            estudioCreado ->
+
+
+                                        estudiosLaboratorio.add(
+                                            estudioCreado
+                                        )
+
+
+                                        estudioLaboratorioEnEdicion =
+                                            null
+
+
+                                        registroSaludEnEdicion =
+                                            null
+
+
+                                        Toast
+                                            .makeText(
+
+                                                context,
+
+                                                "Estudio guardado",
+
+                                                Toast.LENGTH_SHORT
+                                            )
+                                            .show()
+
+
+                                        currentScreen =
+                                            Screen.BitacoraSalud
+                                    },
+
+                                    onError = {
+                                            mensaje ->
+
+
+                                        Toast
+                                            .makeText(
+
+                                                context,
+
+                                                "No fue posible guardar el estudio: $mensaje",
+
+                                                Toast.LENGTH_LONG
+                                            )
+                                            .show()
+                                    }
+                                )
+                        }
                     }
 
 
-                    registroSaludEnEdicion =
-                        null
+                    // ========================================================
+                    // SI NO HAY ARCHIVOS LOCALES
+                    // ========================================================
+                    //
+                    // Esto pasa, por ejemplo, cuando editamos un estudio
+                    // que ya tiene todos sus archivos en Cloudinary.
+                    //
+                    // ========================================================
+
+                    if (
+                        archivosLocales.isEmpty()
+                    ) {
+
+                        guardarEstudioConUrls(
+                            archivosYaSubidos
+                        )
+
+                    } else {
 
 
-                    currentScreen =
-                        Screen.BitacoraSalud
+                        // ====================================================
+                        // SUBIR ARCHIVOS NUEVOS A CLOUDINARY
+                        // ====================================================
+
+                        Toast
+                            .makeText(
+
+                                context,
+
+                                "Subiendo archivos...",
+
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+
+
+                        CloudinaryRepository
+                            .subirArchivos(
+
+                                context =
+                                    context,
+
+                                uris =
+                                    archivosLocales,
+
+                                onSuccess = {
+                                        nuevasUrls ->
+
+
+                                    // ----------------------------------------
+                                    // CONSERVAR URL ANTERIORES + NUEVAS
+                                    // ----------------------------------------
+
+                                    val urlsFinales =
+                                        archivosYaSubidos +
+                                                nuevasUrls
+
+
+                                    guardarEstudioConUrls(
+                                        urlsFinales
+                                    )
+                                },
+
+                                onError = {
+                                        mensaje ->
+
+
+                                    Toast
+                                        .makeText(
+
+                                            context,
+
+                                            "No fue posible subir los archivos: $mensaje",
+
+                                            Toast.LENGTH_LONG
+                                        )
+                                        .show()
+                                }
+                            )
+                    }
                 }
             )
         }
@@ -4008,7 +5845,7 @@ fun backgroundGradient(): Brush {
 
                 Color(0xFFD1F5E8),
 
-                Color(0xFFF0F4C3)
+                Color(0xF6ECECFF),
             )
     )
 }

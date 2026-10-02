@@ -1,0 +1,14 @@
+// ============================================================================
+// AGREGAR A ApiClient.kt
+// ============================================================================
+//
+// Dentro de object ApiClient:
+//
+// val adherenciaMedicamentosApi: AdherenciaMedicamentosApi by lazy {
+//
+//     retrofit.create(
+//         AdherenciaMedicamentosApi::class.java
+//     )
+// }
+//
+// ============================================================================

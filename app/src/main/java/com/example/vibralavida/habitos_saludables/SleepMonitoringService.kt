@@ -35,7 +35,6 @@ import androidx.core.content.ContextCompat
 
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.roundToLong
 
 
 // ============================================================================
@@ -196,7 +195,11 @@ class SleepMonitoringService : Service() {
         }
 
 
-        return START_STICKY
+        // Un servicio que utiliza micrófono no conviene que Android
+        // intente reiniciarlo automáticamente en segundo plano.
+        //
+        // El usuario debe iniciar explícitamente el Modo Sueño.
+        return START_NOT_STICKY
     }
 
 
@@ -347,24 +350,47 @@ class SleepMonitoringService : Service() {
         // ====================================================================
         // ANDROID 11+
         // ====================================================================
+        //
+        // FOREGROUND_SERVICE_TYPE_MICROPHONE requiere API 30.
+        //
+        // En Android 14+, además, este tipo debe coincidir con:
+        //
+        // android:foregroundServiceType="microphone"
+        //
+        // declarado en AndroidManifest.xml.
+        //
+        // ====================================================================
 
         if (
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.R
         ) {
 
+            try {
 
-            ServiceCompat.startForeground(
+                ServiceCompat.startForeground(
 
-                this,
+                    this,
 
-                NOTIFICATION_ID,
+                    NOTIFICATION_ID,
 
-                notification,
+                    notification,
 
-                ServiceInfo
-                    .FOREGROUND_SERVICE_TYPE_MICROPHONE
-            )
+                    ServiceInfo
+                        .FOREGROUND_SERVICE_TYPE_MICROPHONE
+                )
+
+            } catch (
+                _: SecurityException
+            ) {
+
+                // Android puede rechazar el servicio si el permiso
+                // fue revocado o si el sistema bloquea el uso del micrófono.
+
+                stopSelf()
+
+                return
+            }
 
         } else {
 
@@ -389,6 +415,40 @@ class SleepMonitoringService : Service() {
 
     private fun captureAudio() {
 
+
+        // ====================================================================
+        // COMPROBAR PERMISO DE MICRÓFONO
+        // ====================================================================
+        //
+        // Aunque el permiso ya se revisó antes de iniciar el servicio,
+        // Android Studio exige comprobarlo también aquí porque AudioRecord
+        // se crea y utiliza dentro de este método y en otro hilo.
+        //
+        // Además, el usuario podría revocar el permiso mientras el servicio
+        // está activo.
+        //
+        // ====================================================================
+
+        if (
+            ContextCompat.checkSelfPermission(
+
+                this,
+
+                Manifest.permission.RECORD_AUDIO
+
+            ) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+
+            stopMonitoring()
+
+            return
+        }
+
+
+        // ====================================================================
+        // TAMAÑO MÍNIMO DEL BUFFER
+        // ====================================================================
 
         val minimumBufferSize =
             AudioRecord.getMinBufferSize(
@@ -422,6 +482,10 @@ class SleepMonitoringService : Service() {
             )
 
 
+        // ====================================================================
+        // CREAR AUDIO RECORD
+        // ====================================================================
+
         val recorder =
             try {
 
@@ -438,13 +502,30 @@ class SleepMonitoringService : Service() {
                     bufferSize * 2
                 )
 
-            } catch (_: Exception) {
+            } catch (
+                _: SecurityException
+            ) {
+
+                // El permiso pudo haber sido revocado
+                // antes de crear AudioRecord.
+
+                stopMonitoring()
+
+                return
+
+            } catch (
+                _: Exception
+            ) {
 
                 stopMonitoring()
 
                 return
             }
 
+
+        // ====================================================================
+        // VALIDAR AUDIO RECORD
+        // ====================================================================
 
         if (
             recorder.state !=
@@ -469,7 +550,29 @@ class SleepMonitoringService : Service() {
             )
 
 
+        // ====================================================================
+        // INICIAR CAPTURA
+        // ====================================================================
+
         try {
+
+
+            // Comprobación adicional justo antes de usar el micrófono.
+            if (
+                ContextCompat.checkSelfPermission(
+
+                    this,
+
+                    Manifest.permission.RECORD_AUDIO
+
+                ) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+
+                stopMonitoring()
+
+                return
+            }
 
 
             recorder.startRecording()
@@ -492,8 +595,7 @@ class SleepMonitoringService : Service() {
 
 
                 if (
-                    read >
-                    0
+                    read > 0
                 ) {
 
 
@@ -519,8 +621,16 @@ class SleepMonitoringService : Service() {
                 }
             }
 
-        } catch (_: Exception) {
+        } catch (
+            _: SecurityException
+        ) {
 
+            // El permiso pudo ser revocado mientras
+            // el servicio estaba funcionando.
+
+        } catch (
+            _: Exception
+        ) {
 
             // Terminamos de forma segura.
 
@@ -529,9 +639,17 @@ class SleepMonitoringService : Service() {
 
             try {
 
-                recorder.stop()
+                if (
+                    recorder.recordingState ==
+                    AudioRecord.RECORDSTATE_RECORDING
+                ) {
 
-            } catch (_: Exception) {
+                    recorder.stop()
+                }
+
+            } catch (
+                _: Exception
+            ) {
             }
 
 

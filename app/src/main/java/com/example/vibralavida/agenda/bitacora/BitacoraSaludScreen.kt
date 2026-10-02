@@ -1,5 +1,12 @@
 package com.example.vibralavida.agenda.bitacora
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +27,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Visibility
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -33,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -47,6 +57,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -98,6 +111,10 @@ fun BitacoraSaludScreen(
     onEliminarEstudio: (EstudioLaboratorio) -> Unit
 
 ) {
+
+
+    val context =
+        LocalContext.current
 
 
     // ========================================================================
@@ -152,6 +169,26 @@ fun BitacoraSaludScreen(
     var estudioAEliminar by remember {
 
         mutableStateOf<EstudioLaboratorio?>(
+            null
+        )
+    }
+
+
+    // ========================================================================
+    // VISUALIZACIÓN DE ARCHIVOS
+    // ========================================================================
+
+    var estudioArchivos by remember {
+
+        mutableStateOf<EstudioLaboratorio?>(
+            null
+        )
+    }
+
+
+    var imagenSeleccionada by remember {
+
+        mutableStateOf<String?>(
             null
         )
     }
@@ -639,6 +676,12 @@ fun BitacoraSaludScreen(
                             estudio =
                                 estudio,
 
+                            onVerArchivos = {
+
+                                estudioArchivos =
+                                    estudio
+                            },
+
                             onEditar = {
 
                                 onEditarEstudio(
@@ -901,6 +944,344 @@ fun BitacoraSaludScreen(
             }
         )
     }
+
+
+    // ========================================================================
+    // LISTA DE ARCHIVOS DEL ESTUDIO
+    // ========================================================================
+
+    estudioArchivos?.let {
+            estudio ->
+
+
+        Dialog(
+
+            onDismissRequest = {
+
+                estudioArchivos =
+                    null
+            }
+
+        ) {
+
+
+            Surface(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                shape =
+                    RoundedCornerShape(
+                        24.dp
+                    ),
+
+                color =
+                    Color(0xFFFEFFF6)
+            ) {
+
+
+                Column(
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(
+                                22.dp
+                            )
+                ) {
+
+
+                    Text(
+
+                        text =
+                            nombreVisibleEstudio(
+                                estudio
+                            ),
+
+                        fontSize =
+                            21.sp,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        color =
+                            Color(0xFF0F172A)
+                    )
+
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(
+                                5.dp
+                            )
+                    )
+
+
+                    Text(
+
+                        text =
+                            "Archivos adjuntos",
+
+                        fontSize =
+                            13.sp,
+
+                        color =
+                            Color(0xFF64748B)
+                    )
+
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(
+                                18.dp
+                            )
+                    )
+
+
+                    estudio.archivosUri.forEachIndexed {
+                            index,
+                            archivo ->
+
+
+                        TarjetaArchivoAdjunto(
+
+                            numero =
+                                index + 1,
+
+                            url =
+                                archivo,
+
+                            onAbrir = {
+
+                                if (
+                                    esImagen(
+                                        archivo
+                                    )
+                                ) {
+
+                                    imagenSeleccionada =
+                                        archivo
+
+                                } else {
+
+                                    abrirArchivoExterno(
+
+                                        context =
+                                            context,
+
+                                        url =
+                                            archivo
+                                    )
+                                }
+                            }
+                        )
+
+
+                        if (
+                            index <
+                            estudio.archivosUri.lastIndex
+                        ) {
+
+                            Spacer(
+
+                                modifier =
+                                    Modifier.height(
+                                        10.dp
+                                    )
+                            )
+                        }
+                    }
+
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(
+                                18.dp
+                            )
+                    )
+
+
+                    OutlinedButton(
+
+                        onClick = {
+
+                            estudioArchivos =
+                                null
+                        },
+
+                        modifier =
+                            Modifier.fillMaxWidth()
+                    ) {
+
+                        Text(
+                            "Cerrar"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+
+    // ========================================================================
+    // VISOR INTERNO DE IMAGEN
+    // ========================================================================
+
+    imagenSeleccionada?.let {
+            urlImagen ->
+
+
+        Dialog(
+
+            onDismissRequest = {
+
+                imagenSeleccionada =
+                    null
+            }
+
+        ) {
+
+
+            Surface(
+
+                modifier =
+                    Modifier.fillMaxSize(),
+
+                shape =
+                    RoundedCornerShape(
+                        20.dp
+                    ),
+
+                color =
+                    Color.Black
+            ) {
+
+
+                Column(
+
+                    modifier =
+                        Modifier.fillMaxSize()
+                ) {
+
+
+                    Row(
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    10.dp
+                                ),
+
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+
+
+                        Text(
+
+                            text =
+                                "Vista del archivo",
+
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                ),
+
+                            color =
+                                Color.White,
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+
+                        TextButton(
+
+                            onClick = {
+
+                                imagenSeleccionada =
+                                    null
+                            }
+
+                        ) {
+
+                            Text(
+
+                                text =
+                                    "Cerrar",
+
+                                color =
+                                    Color.White
+                            )
+                        }
+                    }
+
+
+                    AndroidView(
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(
+                                    1f
+                                ),
+
+                        factory = {
+                                webContext ->
+
+
+                            WebView(
+                                webContext
+                            ).apply {
+
+                                webViewClient =
+                                    WebViewClient()
+
+                                settings.builtInZoomControls =
+                                    true
+
+                                settings.displayZoomControls =
+                                    false
+
+                                settings.loadWithOverviewMode =
+                                    true
+
+                                settings.useWideViewPort =
+                                    true
+
+                                setBackgroundColor(
+                                    android.graphics.Color.BLACK
+                                )
+
+                                loadUrl(
+                                    urlImagen
+                                )
+                            }
+                        },
+
+                        update = {
+                                webView ->
+
+
+                            if (
+                                webView.url !=
+                                urlImagen
+                            ) {
+
+                                webView.loadUrl(
+                                    urlImagen
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
 }
 
 
@@ -1150,6 +1531,8 @@ private fun TarjetaEstudioLaboratorio(
 
     estudio: EstudioLaboratorio,
 
+    onVerArchivos: () -> Unit,
+
     onEditar: () -> Unit,
 
     onEliminar: () -> Unit
@@ -1315,6 +1698,52 @@ private fun TarjetaEstudioLaboratorio(
 
 
             if (
+                estudio.archivosUri.isNotEmpty()
+            ) {
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            10.dp
+                        )
+                )
+
+
+                OutlinedButton(
+
+                    onClick =
+                        onVerArchivos,
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                ) {
+
+                    Icon(
+
+                        imageVector =
+                            Icons.Default.Visibility,
+
+                        contentDescription =
+                            null
+                    )
+
+
+                    Spacer(
+                        modifier =
+                            Modifier.width(
+                                7.dp
+                            )
+                    )
+
+
+                    Text(
+                        "Ver archivos"
+                    )
+                }
+            }
+
+
+            if (
                 estudio.observaciones.isNotBlank()
             ) {
 
@@ -1472,6 +1901,269 @@ private fun BotonesEditarEliminar(
             )
         }
     }
+}
+
+
+// ============================================================================
+// TARJETA DE ARCHIVO ADJUNTO
+// ============================================================================
+
+@Composable
+private fun TarjetaArchivoAdjunto(
+
+    numero: Int,
+
+    url: String,
+
+    onAbrir: () -> Unit
+
+) {
+
+    val tipo =
+        when {
+
+            esPdf(
+                url
+            ) ->
+                "PDF"
+
+            esImagen(
+                url
+            ) ->
+                "Imagen"
+
+            else ->
+                "Archivo"
+        }
+
+
+    Card(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    Color.White
+            ),
+
+        shape =
+            RoundedCornerShape(
+                16.dp
+            )
+    ) {
+
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        14.dp
+                    ),
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+
+            Icon(
+
+                imageVector =
+                    Icons.Default.InsertDriveFile,
+
+                contentDescription =
+                    null,
+
+                tint =
+                    Color(0xFF0F766E)
+            )
+
+
+            Spacer(
+                modifier =
+                    Modifier.width(
+                        10.dp
+                    )
+            )
+
+
+            Column(
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            ) {
+
+
+                Text(
+
+                    text =
+                        "$tipo $numero",
+
+                    fontWeight =
+                        FontWeight.Bold,
+
+                    color =
+                        Color(0xFF0F172A)
+                )
+
+
+                Text(
+
+                    text =
+                        when {
+
+                            esPdf(
+                                url
+                            ) ->
+                                "Documento PDF"
+
+                            esImagen(
+                                url
+                            ) ->
+                                "Fotografía del estudio"
+
+                            else ->
+                                "Archivo del estudio"
+                        },
+
+                    fontSize =
+                        12.sp,
+
+                    color =
+                        Color(0xFF64748B)
+                )
+            }
+
+
+            TextButton(
+
+                onClick =
+                    onAbrir
+
+            ) {
+
+                Text(
+                    "Abrir"
+                )
+            }
+        }
+    }
+}
+
+
+// ============================================================================
+// ABRIR ARCHIVO EXTERNO
+// ============================================================================
+
+private fun abrirArchivoExterno(
+
+    context: android.content.Context,
+
+    url: String
+
+) {
+
+    try {
+
+        val intent =
+            Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(
+                    url
+                )
+            ).apply {
+
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+            }
+
+
+        context.startActivity(
+            intent
+        )
+
+    } catch (
+        e: ActivityNotFoundException
+    ) {
+
+        Toast
+            .makeText(
+
+                context,
+
+                "No se encontró una aplicación para abrir este archivo.",
+
+                Toast.LENGTH_LONG
+            )
+            .show()
+
+    } catch (
+        e: Exception
+    ) {
+
+        Toast
+            .makeText(
+
+                context,
+
+                "No fue posible abrir el archivo.",
+
+                Toast.LENGTH_LONG
+            )
+            .show()
+    }
+}
+
+
+// ============================================================================
+// TIPO DE ARCHIVO
+// ============================================================================
+
+private fun esPdf(
+    url: String
+): Boolean {
+
+    val limpia =
+        url
+            .substringBefore(
+                "?"
+            )
+            .lowercase()
+
+
+    return limpia.endsWith(
+        ".pdf"
+    )
+}
+
+
+private fun esImagen(
+    url: String
+): Boolean {
+
+    val limpia =
+        url
+            .substringBefore(
+                "?"
+            )
+            .lowercase()
+
+
+    return limpia.endsWith(".jpg") ||
+            limpia.endsWith(".jpeg") ||
+            limpia.endsWith(".png") ||
+            limpia.endsWith(".webp") ||
+            limpia.endsWith(".gif") ||
+            limpia.endsWith(".bmp") ||
+            limpia.endsWith(".heic") ||
+            limpia.endsWith(".heif")
 }
 
 

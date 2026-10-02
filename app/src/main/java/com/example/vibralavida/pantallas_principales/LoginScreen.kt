@@ -962,10 +962,17 @@ fun validateLoginForm(
             "Ingresa tu contraseña."
 
 
-        password.length < 6 ->
-
-            "La contraseña debe tener al menos 6 caracteres."
-
+        // IMPORTANTE:
+        //
+        // En inicio de sesión NO validamos longitud, mayúsculas,
+        // minúsculas, números ni símbolos.
+        //
+        // Aquí solamente comprobamos que el usuario haya escrito
+        // una contraseña. Firebase Authentication se encarga de
+        // verificar si esa contraseña corresponde a la cuenta.
+        //
+        // Esto también permite que usuarios antiguos, creados antes
+        // de la nueva política de seguridad, puedan seguir entrando.
 
         else ->
 

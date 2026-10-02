@@ -21,13 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -64,9 +66,23 @@ import androidx.compose.ui.window.Dialog
 
 import coil.compose.rememberAsyncImagePainter
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 
 // ============================================================================
 // PANTALLA DE MEDICAMENTOS
+// ============================================================================
+//
+// Ahora también permite que el paciente REPORTE el estado de cada horario:
+//
+// - tomado
+// - omitido
+//
+// El estado se recibe desde MainActivity mediante registrosAdherencia.
+// La pantalla NO escribe directamente en Firestore.
+//
 // ============================================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,13 +91,22 @@ fun MedicamentosScreen(
 
     medicamentos: List<Medicamento>,
 
+    registrosAdherencia: List<RegistroAdherenciaMedicamento> = emptyList(),
+
     onBack: () -> Unit,
 
     onAgregarMedicamentoClick: () -> Unit,
 
     onEditarMedicamento: (Medicamento) -> Unit,
 
-    onEliminarMedicamento: (Medicamento) -> Unit
+    onEliminarMedicamento: (Medicamento) -> Unit,
+
+    onRegistrarAdherencia: (
+        Medicamento,
+        String,
+        String
+    ) -> Unit = { _, _, _ -> }
+
 ) {
 
     val verdePrincipal =
@@ -95,6 +120,26 @@ fun MedicamentosScreen(
 
     val textoOscuro =
         Color(0xFF0F172A)
+
+
+    // ========================================================================
+    // FECHA ACTUAL
+    // ========================================================================
+    //
+    // La adherencia de esta pantalla corresponde a los horarios del día actual.
+    //
+    // ========================================================================
+
+    val fechaHoy =
+        remember {
+
+            SimpleDateFormat(
+                "dd/MM/yyyy",
+                Locale.getDefault()
+            ).format(
+                Date()
+            )
+        }
 
 
     // Foto mostrada en grande.
@@ -132,7 +177,7 @@ fun MedicamentosScreen(
 
                         Icon(
                             imageVector =
-                                Icons.Default.ArrowBack,
+                                Icons.AutoMirrored.Filled.ArrowBack,
 
                             contentDescription =
                                 "Regresar",
@@ -252,9 +297,11 @@ fun MedicamentosScreen(
 
 
             Text(
-                text = "Organiza tus medicamentos y recuerda tomarlos a tiempo.",
+                text =
+                    "Organiza tus medicamentos y registra si los tomaste.",
 
-                fontSize = 14.sp,
+                fontSize =
+                    14.sp,
 
                 color =
                     Color(0xFF64748B),
@@ -336,7 +383,8 @@ fun MedicamentosScreen(
 
 
                         Text(
-                            text = "Aún no tienes medicamentos registrados",
+                            text =
+                                "Aún no tienes medicamentos registrados",
 
                             color =
                                 textoOscuro,
@@ -356,7 +404,8 @@ fun MedicamentosScreen(
 
 
                         Text(
-                            text = "Agrega tu primer medicamento para comenzar tu seguimiento.",
+                            text =
+                                "Agrega tu primer medicamento para comenzar tu seguimiento.",
 
                             color =
                                 Color(0xFF64748B),
@@ -386,6 +435,12 @@ fun MedicamentosScreen(
                         medicamento =
                             medicamento,
 
+                        fechaHoy =
+                            fechaHoy,
+
+                        registrosAdherencia =
+                            registrosAdherencia,
+
 
                         onFotoClick = {
 
@@ -411,6 +466,22 @@ fun MedicamentosScreen(
 
                             medicamentoAEliminar =
                                 medicamento
+                        },
+
+
+                        onRegistrarAdherencia = {
+                                horario,
+                                estado ->
+
+
+                            onRegistrarAdherencia(
+
+                                medicamento,
+
+                                horario,
+
+                                estado
+                            )
                         }
                     )
 
@@ -618,7 +689,8 @@ fun MedicamentosScreen(
 
 
                     Text(
-                        text = "Utiliza esta fotografía como apoyo visual para identificar tu medicamento.",
+                        text =
+                            "Utiliza esta fotografía como apoyo visual para identificar tu medicamento.",
 
                         fontSize =
                             13.sp,
@@ -737,11 +809,21 @@ fun MedicamentoCard(
 
     medicamento: Medicamento,
 
+    fechaHoy: String,
+
+    registrosAdherencia: List<RegistroAdherenciaMedicamento>,
+
     onFotoClick: () -> Unit,
 
     onEditarClick: () -> Unit,
 
-    onEliminarClick: () -> Unit
+    onEliminarClick: () -> Unit,
+
+    onRegistrarAdherencia: (
+        String,
+        String
+    ) -> Unit
+
 ) {
 
 
@@ -938,18 +1020,14 @@ fun MedicamentoCard(
 
 
             // =================================================================
-            // HORARIOS
+            // HORARIOS + ADHERENCIA
             // =================================================================
 
             Row(
 
-                modifier =
-                    Modifier.fillMaxWidth(),
-
                 verticalAlignment =
                     Alignment.CenterVertically
             ) {
-
 
                 Icon(
                     imageVector =
@@ -974,19 +1052,73 @@ fun MedicamentoCard(
 
                 Text(
                     text =
-                        "Horarios: ${medicamento.horarios.joinToString(" • ")}",
+                        "Horarios de hoy",
 
                     fontSize =
                         14.sp,
 
                     fontWeight =
-                        FontWeight.SemiBold,
+                        FontWeight.Bold,
 
                     color =
-                        Color(0xFF334155),
+                        Color(0xFF334155)
+                )
+            }
 
+
+            Spacer(
+                modifier =
+                    Modifier.height(10.dp)
+            )
+
+
+            medicamento.horarios.forEach {
+                    horario ->
+
+
+                val registro =
+                    registrosAdherencia
+                        .firstOrNull {
+                                actual ->
+
+                            actual.medicamentoId ==
+                                    medicamento.id &&
+                                    actual.fecha ==
+                                    fechaHoy &&
+                                    actual.horarioProgramado ==
+                                    horario
+                        }
+
+
+                HorarioAdherenciaRow(
+
+                    horario =
+                        horario,
+
+                    estado =
+                        registro?.estado.orEmpty(),
+
+                    onTomado = {
+
+                        onRegistrarAdherencia(
+                            horario,
+                            "tomado"
+                        )
+                    },
+
+                    onOmitido = {
+
+                        onRegistrarAdherencia(
+                            horario,
+                            "omitido"
+                        )
+                    }
+                )
+
+
+                Spacer(
                     modifier =
-                        Modifier.weight(1f)
+                        Modifier.height(8.dp)
                 )
             }
 
@@ -1002,7 +1134,7 @@ fun MedicamentoCard(
 
                 Spacer(
                     modifier =
-                        Modifier.height(10.dp)
+                        Modifier.height(4.dp)
                 )
 
 
@@ -1204,6 +1336,288 @@ fun MedicamentoCard(
                     Text(
                         text =
                             "Eliminar",
+
+                        color =
+                            Color(0xFFB91C1C)
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+// ============================================================================
+// FILA DE ADHERENCIA POR HORARIO
+// ============================================================================
+
+@Composable
+private fun HorarioAdherenciaRow(
+
+    horario: String,
+
+    estado: String,
+
+    onTomado: () -> Unit,
+
+    onOmitido: () -> Unit
+
+) {
+
+    val estadoNormalizado =
+        estado.lowercase()
+
+
+    Card(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                16.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    Color.White
+            )
+    ) {
+
+
+        Column(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        12.dp
+                    )
+        ) {
+
+
+            Row(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+
+                Text(
+
+                    text =
+                        horario,
+
+                    modifier =
+                        Modifier.weight(1f),
+
+                    fontWeight =
+                        FontWeight.Bold,
+
+                    fontSize =
+                        16.sp,
+
+                    color =
+                        Color(0xFF0F172A)
+                )
+
+
+                when (
+                    estadoNormalizado
+                ) {
+
+                    "tomado" -> {
+
+                        Icon(
+
+                            imageVector =
+                                Icons.Default.CheckCircle,
+
+                            contentDescription =
+                                null,
+
+                            tint =
+                                Color(0xFF15803D),
+
+                            modifier =
+                                Modifier.size(
+                                    20.dp
+                                )
+                        )
+
+
+                        Spacer(
+                            modifier =
+                                Modifier.width(
+                                    6.dp
+                                )
+                        )
+
+
+                        Text(
+
+                            text =
+                                "Reportado como tomado",
+
+                            color =
+                                Color(0xFF15803D),
+
+                            fontSize =
+                                12.sp,
+
+                            fontWeight =
+                                FontWeight.SemiBold
+                        )
+                    }
+
+
+                    "omitido" -> {
+
+                        Icon(
+
+                            imageVector =
+                                Icons.Default.RadioButtonUnchecked,
+
+                            contentDescription =
+                                null,
+
+                            tint =
+                                Color(0xFFB91C1C),
+
+                            modifier =
+                                Modifier.size(
+                                    20.dp
+                                )
+                        )
+
+
+                        Spacer(
+                            modifier =
+                                Modifier.width(
+                                    6.dp
+                                )
+                        )
+
+
+                        Text(
+
+                            text =
+                                "Reportado como omitido",
+
+                            color =
+                                Color(0xFFB91C1C),
+
+                            fontSize =
+                                12.sp,
+
+                            fontWeight =
+                                FontWeight.SemiBold
+                        )
+                    }
+
+
+                    else -> {
+
+                        Text(
+
+                            text =
+                                "Pendiente",
+
+                            color =
+                                Color(0xFF64748B),
+
+                            fontSize =
+                                12.sp
+                        )
+                    }
+                }
+            }
+
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        10.dp
+                    )
+            )
+
+
+            Row(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        8.dp
+                    )
+            ) {
+
+
+                Button(
+
+                    onClick =
+                        onTomado,
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    shape =
+                        RoundedCornerShape(
+                            14.dp
+                        ),
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+
+                            containerColor =
+                                if (
+                                    estadoNormalizado ==
+                                    "tomado"
+                                ) {
+
+                                    Color(0xFF15803D)
+
+                                } else {
+
+                                    Color(0xFF0F766E)
+                                }
+                        )
+                ) {
+
+                    Text(
+                        "Tomado"
+                    )
+                }
+
+
+                OutlinedButton(
+
+                    onClick =
+                        onOmitido,
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+
+                    shape =
+                        RoundedCornerShape(
+                            14.dp
+                        )
+                ) {
+
+                    Text(
+
+                        text =
+                            "Omitido",
 
                         color =
                             Color(0xFFB91C1C)

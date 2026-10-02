@@ -5,28 +5,37 @@ package com.example.vibralavida.api.modelos
 // PERFIL REQUEST
 // ============================================================================
 //
-// Representa la información que Android enviará a:
+// Se utiliza en:
 //
 // PUT /api/users/me
 //
-// Los nombres deben coincidir con los campos que espera
-// nuestra API de Express.
+// Todos los campos son opcionales para permitir actualizaciones parciales.
+//
+// Ejemplos:
+//
+// - completar/editar el perfil;
+// - actualizar solamente la foto de perfil.
 //
 // ============================================================================
 
 data class PerfilRequest(
 
-    val edad: String,
+    val nombreCompleto: String? = null,
 
-    val genero: String,
+    val edad: String? = null,
 
-    val peso: String,
+    val genero: String? = null,
 
-    val estatura: String,
+    val peso: String? = null,
 
-    val nivelActividad: String,
+    val estatura: String? = null,
 
-    val enfermedadesCronicas: List<String>,
+    val nivelActividad: String? = null,
 
-    val otraEnfermedadCronica: String
+    val enfermedadesCronicas: List<String>? = null,
+
+    val otraEnfermedadCronica: String? = null,
+
+    // URL HTTPS devuelta por Cloudinary.
+    val fotoPerfilUrl: String? = null
 )

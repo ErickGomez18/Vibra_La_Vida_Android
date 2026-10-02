@@ -101,7 +101,28 @@ data class CalculatorResult(
 fun ImcCalculatorScreen(
     userName: String,
     onBackToMenu: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+
+    // ========================================================================
+    // RESULTADO PARA LA API / HISTORIAL
+    // ========================================================================
+    //
+    // Después de calcular el IMC, enviamos los valores a MainActivity.
+    // MainActivity se encarga de guardarlos mediante ResultsRepository.
+    //
+    // Dejamos un valor por defecto para no romper otras llamadas existentes.
+    //
+    // ========================================================================
+
+    onImcCalculated: (
+        edad: Int,
+        genero: String,
+        pesoKg: Double,
+        alturaCm: Double,
+        imc: Double,
+        categoria: String,
+        descripcion: String
+    ) -> Unit = { _, _, _, _, _, _, _ -> }
 ) {
     // Campos escritos por el usuario.
     var age by remember { mutableStateOf("") }
@@ -219,7 +240,24 @@ fun ImcCalculatorScreen(
                     val imc = weightNumber!! / (heightMeters * heightMeters)
 
                     // Genera el resultado con semaforización.
-                    result = buildImcResult(imc)
+                    val resultadoImc =
+                        buildImcResult(imc)
+
+                    // Lo seguimos mostrando exactamente como antes.
+                    result =
+                        resultadoImc
+
+                    // Además notificamos a MainActivity para que pueda
+                    // guardarlo en el historial mediante /api/results.
+                    onImcCalculated(
+                        ageNumber!!,
+                        gender,
+                        weightNumber!!,
+                        heightCm!!,
+                        imc,
+                        resultadoImc.title,
+                        resultadoImc.description
+                    )
                 } else {
                     result = null
                 }
@@ -260,7 +298,24 @@ fun ImcCalculatorScreen(
 fun CaloriesCalculatorScreen(
     userName: String,
     onBackToMenu: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+
+    // ========================================================================
+    // RESULTADO PARA NUBY
+    // ========================================================================
+    //
+    // MainActivity conserva estos tres valores para que Nuby pueda utilizarlos
+    // únicamente cuando una pregunta realmente necesite contexto de calorías.
+    //
+    // Se deja un valor por defecto para no romper otras llamadas existentes.
+    //
+    // ========================================================================
+
+    onCaloriesCalculated: (
+        loseCalories: Int,
+        maintainCalories: Int,
+        gainCalories: Int
+    ) -> Unit = { _, _, _ -> }
 ) {
     var gender by remember { mutableStateOf("Hombre") }
     var age by remember { mutableStateOf("") }
@@ -388,9 +443,28 @@ fun CaloriesCalculatorScreen(
                     val maintenance = (bmr * activityFactor).toInt()
 
                     // Tres resultados solicitados.
+                    val lose = maintenance - 500
+                    val gain = maintenance + 500
+
                     maintainCalories = maintenance
-                    loseCalories = maintenance - 500
-                    gainCalories = maintenance + 500
+                    loseCalories = lose
+                    gainCalories = gain
+
+                    // ========================================================
+                    // COMPARTIR RESULTADO CON MAINACTIVITY / NUBY
+                    // ========================================================
+                    //
+                    // La calculadora sigue mostrando exactamente los mismos
+                    // resultados. Además notificamos a MainActivity para que
+                    // pueda conservarlos en memoria.
+                    //
+                    // ========================================================
+
+                    onCaloriesCalculated(
+                        lose,
+                        maintenance,
+                        gain
+                    )
                 } else {
                     maintainCalories = null
                     loseCalories = null

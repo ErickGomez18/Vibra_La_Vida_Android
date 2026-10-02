@@ -127,4 +127,93 @@ object ApiClient {
             MedicamentosApi::class.java
         )
     }
+
+
+    // ========================================================================
+    // BITÁCORA API
+    // ========================================================================
+
+    val bitacoraApi: BitacoraApi by lazy {
+
+        retrofit.create(
+            BitacoraApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // SUBIDA DE ARCHIVOS / CLOUDINARY
+    // ========================================================================
+
+    val uploadsApi: UploadsApi by lazy {
+
+        retrofit.create(
+            UploadsApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // CITAS API
+    // ========================================================================
+
+    val citasApi: CitasApi by lazy {
+
+        retrofit.create(
+            CitasApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // HEALTH CONNECT API
+    // ========================================================================
+
+    val healthConnectApi: HealthConnectApi by lazy {
+
+        retrofit.create(
+            HealthConnectApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // ADHERENCIA DE MEDICAMENTOS
+    // ========================================================================
+
+    val adherenciaMedicamentosApi: AdherenciaMedicamentosApi by lazy {
+
+        retrofit.create(
+            AdherenciaMedicamentosApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // RESPUESTA DEL PACIENTE A CITAS
+    // ========================================================================
+
+    val citasPacienteApi: CitasPacienteApi by lazy {
+
+        retrofit.create(
+            CitasPacienteApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // RESULTADOS / HISTORIAL DE EVALUACIONES
+    // ========================================================================
+    //
+    // Lo utilizamos para guardar IMC y posteriormente podremos reutilizarlo
+    // para calorías, AIS, DASS-21 y otras evaluaciones.
+    //
+    // ========================================================================
+
+    val resultsApi: ResultsApi by lazy {
+
+        retrofit.create(
+            ResultsApi::class.java
+        )
+    }
 }

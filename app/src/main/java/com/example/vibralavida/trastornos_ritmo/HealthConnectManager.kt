@@ -257,8 +257,20 @@ data class SleepSummary(
 // ============================================================================
 
 class HealthConnectManager(
-    private val context: Context
+    context: Context
 ) {
+
+
+    // ========================================================================
+    // CONTEXTO DE APLICACIÓN
+    // ========================================================================
+    //
+    // Evitamos conservar una referencia a Activity.
+    //
+    // ========================================================================
+
+    private val context =
+        context.applicationContext
 
 
     // ========================================================================
@@ -321,10 +333,32 @@ class HealthConnectManager(
 
 
     // ========================================================================
+    // ¿HEALTH CONNECT ESTÁ DISPONIBLE?
+    // ========================================================================
+
+    fun isAvailable(): Boolean {
+
+        return getAvailabilityStatus() ==
+                HealthConnectClient.SDK_AVAILABLE
+    }
+
+
+    // ========================================================================
     // COMPROBAR PERMISOS
     // ========================================================================
 
     suspend fun hasAllPermissions(): Boolean {
+
+
+        // Si Health Connect no está disponible todavía,
+        // no intentamos acceder al PermissionController.
+        if (
+            !isAvailable()
+        ) {
+
+            return false
+        }
+
 
         val grantedPermissions =
             healthConnectClient
@@ -348,6 +382,15 @@ class HealthConnectManager(
     // ========================================================================
 
     suspend fun readTodaySteps(): Long {
+
+
+        if (
+            !isAvailable()
+        ) {
+
+            return 0L
+        }
+
 
         val zoneId =
             ZoneId.systemDefault()
@@ -382,6 +425,15 @@ class HealthConnectManager(
     suspend fun readStepsFromLastDays(
         days: Long = 30
     ): Long {
+
+
+        if (
+            !isAvailable()
+        ) {
+
+            return 0L
+        }
+
 
         val now =
             Instant.now()
@@ -469,6 +521,95 @@ class HealthConnectManager(
         days: Long = 30
     ): Long? {
 
+        return readLatestHeartRatePointFromLastDays(
+            days = days
+        )?.bpm
+    }
+
+
+    // ========================================================================
+    // ÚLTIMA FRECUENCIA CON FECHA Y HORA
+    // ========================================================================
+
+    suspend fun readLatestHeartRatePointFromLastDays(
+        days: Long = 30
+    ): HeartRatePoint? {
+
+        if (!isAvailable()) {
+            return null
+        }
+
+        val now =
+            Instant.now()
+
+        val startTime =
+            now.minus(
+                Duration.ofDays(
+                    days
+                )
+            )
+
+        val response =
+            healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType =
+                        HeartRateRecord::class,
+                    timeRangeFilter =
+                        TimeRangeFilter.between(
+                            startTime,
+                            now
+                        )
+                )
+            )
+
+        return response.records
+            .filter {
+                it.metadata
+                    .dataOrigin
+                    .packageName ==
+                        watchPackageName
+            }
+            .flatMap { record ->
+                record.samples.map { sample ->
+                    HeartRatePoint(
+                        time =
+                            sample.time,
+                        bpm =
+                            sample.beatsPerMinute
+                    )
+                }
+            }
+            .maxByOrNull {
+                it.time
+            }
+    }
+
+
+
+    // ========================================================================
+    // ÚLTIMO DÍA CON MEDICIONES DE FRECUENCIA CARDÍACA
+    // ========================================================================
+
+    /**
+     * Busca todas las mediciones del día más reciente que tenga datos
+     * dentro del rango indicado.
+     *
+     * Esto permite dibujar una gráfica histórica completa cuando
+     * todavía no existen mediciones del día actual.
+     */
+    suspend fun readLatestHeartRateDayPointsFromLastDays(
+        days: Long = 30
+    ): List<HeartRatePoint> {
+
+
+        if (
+            !isAvailable()
+        ) {
+
+            return emptyList()
+        }
+
+
         val now =
             Instant.now()
 
@@ -491,19 +632,16 @@ class HealthConnectManager(
 
                     timeRangeFilter =
                         TimeRangeFilter.between(
-
                             startTime,
-
                             now
                         )
                 )
             )
 
 
-        val latestSample =
+        val allPoints =
             response.records
 
-                // Solo Mi Fitness.
                 .filter {
 
                     it.metadata
@@ -512,21 +650,59 @@ class HealthConnectManager(
                             watchPackageName
                 }
 
-                // Obtener muestras.
-                .flatMap {
+                .flatMap { record ->
 
-                    it.samples
+                    record.samples.map { sample ->
+
+                        HeartRatePoint(
+
+                            time =
+                                sample.time,
+
+                            bpm =
+                                sample.beatsPerMinute
+                        )
+                    }
                 }
 
-                // Buscar la última.
-                .maxByOrNull {
+                .sortedBy {
 
                     it.time
                 }
 
 
-        return latestSample
-            ?.beatsPerMinute
+        if (
+            allPoints.isEmpty()
+        ) {
+
+            return emptyList()
+        }
+
+
+        val zoneId =
+            ZoneId.systemDefault()
+
+
+        val latestDate =
+            allPoints
+                .last()
+                .time
+                .atZone(
+                    zoneId
+                )
+                .toLocalDate()
+
+
+        return allPoints
+            .filter { point ->
+
+                point.time
+                    .atZone(
+                        zoneId
+                    )
+                    .toLocalDate() ==
+                        latestDate
+            }
     }
 
 
@@ -536,6 +712,15 @@ class HealthConnectManager(
 
     suspend fun readTodayHeartRatePoints():
             List<HeartRatePoint> {
+
+
+        if (
+            !isAvailable()
+        ) {
+
+            return emptyList()
+        }
+
 
         val zoneId =
             ZoneId.systemDefault()
@@ -648,6 +833,15 @@ class HealthConnectManager(
     suspend fun readLastSleepSummaryFromLastDays(
         days: Long = 30
     ): SleepSummary? {
+
+
+        if (
+            !isAvailable()
+        ) {
+
+            return null
+        }
+
 
         val now =
             Instant.now()

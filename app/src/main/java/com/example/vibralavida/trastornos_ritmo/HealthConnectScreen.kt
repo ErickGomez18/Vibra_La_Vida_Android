@@ -1,5 +1,7 @@
 package com.example.vibralavida.trastornos_ritmo
 import com.example.vibralavida.backgroundGradient
+import com.example.vibralavida.api.HealthConnectRepository
+import com.example.vibralavida.api.modelos.HealthConnectSyncRequest
 
 // ============================================================================
 // ANDROID
@@ -103,8 +105,11 @@ import kotlinx.coroutines.launch
 // FECHA Y HORA
 // ============================================================================
 
+import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 
 // ============================================================================
@@ -169,10 +174,12 @@ fun HealthConnectScreen(
     // ------------------------------------------------------------------------
 
     val healthConnectManager =
-        remember {
+        remember(
+            context
+        ) {
 
             HealthConnectManager(
-                context
+                context.applicationContext
             )
         }
 
@@ -247,9 +254,275 @@ fun HealthConnectScreen(
     }
 
 
+    // Mediciones del último día histórico disponible.
+    //
+    // Se usan únicamente cuando hoy no existen datos.
+    var historicalHeartRatePoints by
+    remember {
+
+        mutableStateOf<List<HeartRatePoint>>(
+            emptyList()
+        )
+    }
+
+
     // ========================================================================
     // PERMISOS
     // ========================================================================
+
+    suspend fun readHealthData(
+        syncWithBackend: Boolean = false
+    ) {
+
+        try {
+
+            isLoading =
+                true
+
+
+            hasPermissions =
+                healthConnectManager
+                    .hasAllPermissions()
+
+
+            if (
+                !hasPermissions
+            ) {
+
+                message =
+                    "Primero concede los permisos de Health Connect."
+
+                return
+            }
+
+
+            // ---------------------------------------------------------------
+            // PASOS DE HOY
+            // ---------------------------------------------------------------
+
+            val pasosLeidos =
+                healthConnectManager
+                    .readTodaySteps()
+
+
+            todaySteps =
+                pasosLeidos
+
+
+            // ---------------------------------------------------------------
+            // FRECUENCIA CARDÍACA DEL DÍA
+            // ---------------------------------------------------------------
+
+            val puntosFrecuencia =
+                healthConnectManager
+                    .readTodayHeartRatePoints()
+
+
+            heartRatePoints =
+                puntosFrecuencia
+
+
+            // Si hoy no hay datos, buscamos TODAS las mediciones
+            // del último día disponible para poder dibujar la gráfica.
+            historicalHeartRatePoints =
+                if (
+                    puntosFrecuencia.isEmpty()
+                ) {
+
+                    healthConnectManager
+                        .readLatestHeartRateDayPointsFromLastDays(
+                            days = 30
+                        )
+
+                } else {
+
+                    emptyList()
+                }
+
+
+            // ---------------------------------------------------------------
+            // ACTUALIZAR INTERFAZ
+            // ---------------------------------------------------------------
+
+            message =
+                "Datos actualizados correctamente."
+
+
+            // ---------------------------------------------------------------
+            // SINCRONIZAR CON LA API
+            // ---------------------------------------------------------------
+            //
+            // No hacemos una escritura en Firebase cada 60 segundos.
+            //
+            // Sincronizamos:
+            //
+            // - al abrir la pantalla;
+            // - cuando el usuario pulsa "Actualizar datos";
+            // - después de conceder permisos.
+            //
+            // ---------------------------------------------------------------
+
+            if (
+                syncWithBackend
+            ) {
+
+
+                // -----------------------------------------------------------
+                // ÚLTIMA SESIÓN DE SUEÑO
+                // -----------------------------------------------------------
+
+                val sleepSummary =
+                    healthConnectManager
+                        .readLastSleepSummaryFromLastDays(
+                            days = 30
+                        )
+
+
+                // -----------------------------------------------------------
+                // FC ACTUAL / MÍNIMA / MÁXIMA
+                // -----------------------------------------------------------
+
+                val latestHeartRate =
+                    puntosFrecuencia
+                        .maxByOrNull {
+                            it.time
+                        }
+                        ?.bpm
+
+
+                val minimumHeartRate =
+                    puntosFrecuencia
+                        .minByOrNull {
+                            it.bpm
+                        }
+                        ?.bpm
+
+
+                val maximumHeartRate =
+                    puntosFrecuencia
+                        .maxByOrNull {
+                            it.bpm
+                        }
+                        ?.bpm
+
+
+                // -----------------------------------------------------------
+                // REQUEST
+                // -----------------------------------------------------------
+
+                val request =
+                    HealthConnectSyncRequest(
+
+                        fecha =
+                            LocalDate
+                                .now(
+                                    ZoneId.systemDefault()
+                                )
+                                .toString(),
+
+                        pasos =
+                            pasosLeidos,
+
+                        frecuenciaCardiaca =
+                            latestHeartRate,
+
+                        frecuenciaCardiacaMinima =
+                            minimumHeartRate,
+
+                        frecuenciaCardiacaMaxima =
+                            maximumHeartRate,
+
+                        cantidadMedicionesFrecuenciaCardiaca =
+                            puntosFrecuencia.size,
+
+                        suenoMinutos =
+                            sleepSummary
+                                ?.totalMinutes,
+
+                        inicioSueno =
+                            sleepSummary
+                                ?.startTime
+                                ?.toString(),
+
+                        finSueno =
+                            sleepSummary
+                                ?.endTime
+                                ?.toString(),
+
+                        suenoLigeroMinutos =
+                            sleepSummary
+                                ?.lightSleepMinutes,
+
+                        suenoProfundoMinutos =
+                            sleepSummary
+                                ?.deepSleepMinutes,
+
+                        suenoRemMinutos =
+                            sleepSummary
+                                ?.remSleepMinutes,
+
+                        despiertoMinutos =
+                            sleepSummary
+                                ?.awakeMinutes,
+
+                        fuente =
+                            "Mi Fitness / Health Connect",
+
+                        fechaLectura =
+                            Instant
+                                .now()
+                                .toString()
+                    )
+
+
+                // -----------------------------------------------------------
+                // ENVIAR A EXPRESS
+                // -----------------------------------------------------------
+
+                HealthConnectRepository
+                    .sincronizar(
+
+                        datos =
+                            request,
+
+                        onSuccess = {
+
+                            message =
+                                "Datos actualizados y sincronizados correctamente."
+                        },
+
+                        onUnauthorized = {
+
+                            message =
+                                "La sesión no es válida. Inicia sesión nuevamente."
+                        },
+
+                        onError = {
+                                error ->
+
+                            // Los datos locales sí se pudieron leer.
+                            // Por eso no borramos lo que ya está en pantalla.
+                            message =
+                                "Datos actualizados. Sincronización pendiente: $error"
+                        }
+                    )
+            }
+
+
+        } catch (
+            e: Exception
+        ) {
+
+            message =
+                "Error al leer datos: ${e.message}"
+
+        } finally {
+
+            isLoading =
+                false
+        }
+    }
+
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
@@ -272,6 +545,11 @@ fun HealthConnectScreen(
                     message =
                         "Health Connect conectado correctamente."
 
+
+                    readHealthData(
+                        syncWithBackend = true
+                    )
+
                 } else {
 
                     message =
@@ -293,64 +571,7 @@ fun HealthConnectScreen(
      * - Pasos de hoy.
      * - Frecuencia cardíaca de hoy.
      */
-    suspend fun readHealthData() {
 
-        try {
-
-            isLoading =
-                true
-
-
-            hasPermissions =
-                healthConnectManager
-                    .hasAllPermissions()
-
-
-            if (!hasPermissions) {
-
-                message =
-                    "Primero concede los permisos de Health Connect."
-
-                isLoading =
-                    false
-
-                return
-            }
-
-
-            // ---------------------------------------------------------------
-            // PASOS DE HOY
-            // ---------------------------------------------------------------
-
-            todaySteps =
-                healthConnectManager
-                    .readTodaySteps()
-
-
-            // ---------------------------------------------------------------
-            // FRECUENCIA CARDÍACA DEL DÍA
-            // ---------------------------------------------------------------
-
-            heartRatePoints =
-                healthConnectManager
-                    .readTodayHeartRatePoints()
-
-
-            message =
-                "Datos actualizados correctamente."
-
-
-        } catch (e: Exception) {
-
-            message =
-                "Error al leer datos: ${e.message}"
-
-        } finally {
-
-            isLoading =
-                false
-        }
-    }
 
 
     // ========================================================================
@@ -370,7 +591,19 @@ fun HealthConnectScreen(
         ) {
 
             message =
-                "Health Connect no está disponible o necesita actualizarse."
+
+                if (
+                    status ==
+                    HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED
+                ) {
+
+                    "Health Connect necesita instalarse o actualizarse."
+
+                } else {
+
+                    "Health Connect no está disponible en este dispositivo."
+                }
+
 
             return@LaunchedEffect
         }
@@ -421,7 +654,9 @@ fun HealthConnectScreen(
 
         } else if (hasPermissions) {
 
-            readHealthData()
+            readHealthData(
+                syncWithBackend = true
+            )
 
         } else {
 
@@ -445,7 +680,9 @@ fun HealthConnectScreen(
 
             while (true) {
 
-                readHealthData()
+                readHealthData(
+                    syncWithBackend = false
+                )
 
                 delay(
                     60_000
@@ -570,7 +807,7 @@ fun HealthConnectScreen(
                     Text(
 
                         text =
-                            "Monitorea tu actividad física y frecuencia cardíaca con los datos disponibles de tu dispositivo.",
+                            "Monitorea tu actividad física y frecuencia cardíaca con los datos que Mi Fitness comparte con Health Connect.",
 
                         fontSize =
                             13.sp,
@@ -690,7 +927,20 @@ fun HealthConnectScreen(
                     HeartRateMonitoringCard(
 
                         points =
-                            heartRatePoints
+                            if (
+                                heartRatePoints.isNotEmpty()
+                            ) {
+
+                                heartRatePoints
+
+                            } else {
+
+                                historicalHeartRatePoints
+                            },
+
+                        isHistorical =
+                            heartRatePoints.isEmpty() &&
+                                    historicalHeartRatePoints.isNotEmpty()
                     )
 
 
@@ -712,7 +962,9 @@ fun HealthConnectScreen(
 
                             coroutineScope.launch {
 
-                                readHealthData()
+                                readHealthData(
+                                    syncWithBackend = true
+                                )
                             }
                         },
 
@@ -804,6 +1056,22 @@ fun HealthConnectScreen(
                                     permissionLauncher.launch(
                                         healthConnectManager.permissions
                                     )
+
+                                } else {
+
+                                    message =
+
+                                        if (
+                                            status ==
+                                            HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED
+                                        ) {
+
+                                            "Health Connect necesita instalarse o actualizarse."
+
+                                        } else {
+
+                                            "Health Connect no está disponible en este dispositivo."
+                                        }
                                 }
                             },
 
@@ -1261,7 +1529,10 @@ fun classifySteps(
 
 @Composable
 fun HeartRateMonitoringCard(
-    points: List<HeartRatePoint>
+
+    points: List<HeartRatePoint>,
+
+    isHistorical: Boolean = false
 ) {
 
     // Punto seleccionado por el usuario.
@@ -1407,7 +1678,16 @@ fun HeartRateMonitoringCard(
                     Text(
 
                         text =
-                            "Mediciones registradas hoy",
+                            if (
+                                isHistorical
+                            ) {
+
+                                "Último día con mediciones disponibles"
+
+                            } else {
+
+                                "Mediciones registradas hoy"
+                            },
 
                         fontSize =
                             12.sp,
@@ -1436,7 +1716,7 @@ fun HeartRateMonitoringCard(
                 Text(
 
                     text =
-                        "No hay mediciones de frecuencia cardíaca disponibles para el día de hoy.",
+                        "No hay mediciones de frecuencia cardíaca disponibles en los últimos 30 días.",
 
                     fontSize =
                         13.sp,
@@ -1452,6 +1732,60 @@ fun HeartRateMonitoringCard(
                 )
 
                 return@Column
+            }
+
+
+            // =================================================================
+            // AVISO DE DATOS HISTÓRICOS
+            // =================================================================
+
+            if (
+                isHistorical
+            ) {
+
+                val historicalDate =
+                    points
+                        .first()
+                        .time
+                        .atZone(
+                            ZoneId.systemDefault()
+                        )
+                        .format(
+                            DateTimeFormatter.ofPattern(
+                                "dd MMM yyyy",
+                                Locale(
+                                    "es",
+                                    "MX"
+                                )
+                            )
+                        )
+
+
+                Text(
+
+                    text =
+                        "No hay mediciones de hoy. Mostrando datos del $historicalDate.",
+
+                    fontSize =
+                        11.sp,
+
+                    color =
+                        Color(0xFF64748B),
+
+                    textAlign =
+                        TextAlign.Center,
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            10.dp
+                        )
+                )
             }
 
 
@@ -1597,7 +1931,16 @@ fun HeartRateMonitoringCard(
             Text(
 
                 text =
-                    "${points.size} mediciones registradas hoy",
+                    if (
+                        isHistorical
+                    ) {
+
+                        "${points.size} mediciones del último día disponible"
+
+                    } else {
+
+                        "${points.size} mediciones registradas hoy"
+                    },
 
                 fontSize =
                     11.sp,
@@ -2394,6 +2737,34 @@ fun formatHeartRateTime(
             "HH:mm"
         )
 
+
+    return point.time
+        .atZone(
+            ZoneId.systemDefault()
+        )
+        .format(
+            formatter
+        )
+}
+
+
+
+// ============================================================================
+// FORMATEAR FECHA Y HORA
+// ============================================================================
+
+fun formatHeartRateDateTime(
+    point: HeartRatePoint
+): String {
+
+    val formatter =
+        DateTimeFormatter.ofPattern(
+            "dd MMM · HH:mm",
+            Locale(
+                "es",
+                "MX"
+            )
+        )
 
     return point.time
         .atZone(

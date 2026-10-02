@@ -1,18 +1,20 @@
 package com.example.vibralavida.pantallas_principales
 
+// ============================================================================
+// VIBRA LA VIDA
+// ============================================================================
+
 import com.example.vibralavida.R
 import com.example.vibralavida.backgroundGradient
+import com.example.vibralavida.ia.NubyTtsManager
 
-// Clase de Android que permite convertir texto en voz.
-import android.speech.tts.TextToSpeech
+// ============================================================================
+// COMPOSE FOUNDATION
+// ============================================================================
 
-// ============================================================
-// IMPORTACIONES DE COMPOSE
-// ============================================================
-
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,21 +33,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-
 import androidx.compose.foundation.rememberScrollState
-
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-
 import androidx.compose.foundation.verticalScroll
 
-
-// ============================================================
+// ============================================================================
 // ICONOS
-// ============================================================
+// ============================================================================
 
 import androidx.compose.material.icons.Icons
-
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
@@ -56,10 +53,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.VolumeUp
 
-
-// ============================================================
-// MATERIAL DESIGN 3
-// ============================================================
+// ============================================================================
+// MATERIAL 3
+// ============================================================================
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,6 +63,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalNavigationDrawer
@@ -75,100 +72,87 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 
-
-// ============================================================
-// ESTADOS DE COMPOSE
-// ============================================================
+// ============================================================================
+// ESTADOS
+// ============================================================================
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 
-
-// ============================================================
-// INTERFAZ
-// ============================================================
+// ============================================================================
+// UI
+// ============================================================================
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.draw.clip
-
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+// ============================================================================
+// CORRUTINAS
+// ============================================================================
 
-// ============================================================
-// OTROS
-// ============================================================
-
-// Para establecer el idioma del TextToSpeech.
-import java.util.Locale
-
-// Para abrir y cerrar el menú lateral.
 import kotlinx.coroutines.launch
 
 
-// ============================================================
-// PANTALLA PRINCIPAL
-// ============================================================
+// ============================================================================
+// HOME SCREEN
+// ============================================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
 
-    // Nombre mostrado en la parte superior.
-    userName: String = "María",
+    userName: String = "Usuario",
 
-    // Abre el perfil.
     onProfileClick: () -> Unit,
 
-    // Abre Trastornos del ritmo.
     onRhythmClick: () -> Unit,
 
-    // Abre Vida saludable.
     onHealthyLifeClick: () -> Unit,
 
-    // Abre Diabetes Mellitus.
+    onAgendaClick: () -> Unit,
+
     onDiabetesClick: () -> Unit,
 
-    // Abre Mi Agenda.
-    onAgendaClick: () -> Unit
-
+    // NUEVO:
+    // abre la pantalla interactiva de Nuby.
+    onNubyClick: () -> Unit
 ) {
 
-    // ------------------------------------------------------------
-    // ESTADO DEL MENÚ LATERAL
-    // ------------------------------------------------------------
+    // ========================================================================
+    // DRAWER
+    // ========================================================================
 
-    val drawerState = rememberDrawerState(
-        initialValue = DrawerValue.Closed
-    )
-
-
-    // Permite ejecutar operaciones como abrir y cerrar el menú.
-    val scope = rememberCoroutineScope()
+    val drawerState =
+        rememberDrawerState(
+            initialValue =
+                DrawerValue.Closed
+        )
 
 
-    // ============================================================
-    // MENÚ LATERAL
-    // ============================================================
+    val scope =
+        rememberCoroutineScope()
+
+
+    // ========================================================================
+    // CONTENEDOR CON DRAWER
+    // ========================================================================
 
     ModalNavigationDrawer(
 
-        drawerState = drawerState,
+        drawerState =
+            drawerState,
 
         drawerContent = {
 
@@ -179,380 +163,418 @@ fun HomeScreen(
                     scope.launch {
 
                         drawerState.close()
-
                     }
-
                 }
-
             )
-
         }
-
     ) {
-
-
-        // ========================================================
-        // CONTENEDOR PRINCIPAL
-        // ========================================================
 
         Box(
 
-            modifier = Modifier
-                .fillMaxSize()
-
-                // Utiliza el fondo degradado de Vibra la vida.
-                .background(backgroundGradient())
-
-                // Evita que el contenido se coloque debajo
-                // de la barra superior del celular.
-                .statusBarsPadding()
-
-                // Evita la barra inferior.
-                .navigationBarsPadding()
-
-                // Ajusta la pantalla cuando aparece el teclado.
-                .imePadding()
-
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        backgroundGradient()
+                    )
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .imePadding()
         ) {
 
-
-            // ----------------------------------------------------
-            // EFECTO DECORATIVO DEL FONDO
-            // ----------------------------------------------------
+            // =================================================================
+            // DECORACIÓN
+            // =================================================================
 
             BackgroundBlurCircle(
 
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 40.dp)
-
+                modifier =
+                    Modifier
+                        .align(
+                            Alignment.TopCenter
+                        )
+                        .padding(
+                            top = 40.dp
+                        )
             )
 
 
-            // ====================================================
-            // CONTENIDO CON SCROLL
-            // ====================================================
+            // =================================================================
+            // CONTENIDO
+            // =================================================================
 
             Column(
 
-                modifier = Modifier
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(
+                            rememberScrollState()
+                        )
+                        .padding(
+                            horizontal = 18.dp,
+                            vertical = 18.dp
+                        ),
 
-                    .fillMaxSize()
-
-                    // Permite desplazarse verticalmente.
-                    .verticalScroll(
-                        rememberScrollState()
-                    )
-
-                    .padding(
-                        horizontal = 18.dp,
-                        vertical = 18.dp
-                    ),
-
-                horizontalAlignment = Alignment.CenterHorizontally
-
+                horizontalAlignment =
+                    Alignment.CenterHorizontally
             ) {
 
-
-                // =================================================
-                // BARRA SUPERIOR
-                // =================================================
+                // =============================================================
+                // TOP BAR
+                // =============================================================
 
                 HomeTopBar(
 
-                    userName = userName,
+                    userName =
+                        userName,
 
                     onMenuClick = {
 
                         scope.launch {
 
                             drawerState.open()
-
                         }
-
                     },
 
-                    onProfileClick = onProfileClick
-
+                    onProfileClick =
+                        onProfileClick
                 )
 
 
                 Spacer(
-                    modifier = Modifier.height(18.dp)
+
+                    modifier =
+                        Modifier.height(
+                            18.dp
+                        )
                 )
 
 
-                // =================================================
-                // PRESENTACIÓN DE FITY
-                // =================================================
+                // =============================================================
+                // NUBY
+                // =============================================================
 
-                MascotPresentationCard()
+                MascotPresentationCard(
+
+                    onNubyClick =
+                        onNubyClick
+                )
 
 
                 Spacer(
-                    modifier = Modifier.height(22.dp)
+
+                    modifier =
+                        Modifier.height(
+                            22.dp
+                        )
                 )
 
 
-                // =================================================
-                // TÍTULO DE LAS CATEGORÍAS
-                // =================================================
+                // =============================================================
+                // TÍTULO
+                // =============================================================
 
                 Text(
 
-                    text = "Selecciona el campo que deseas visitar",
+                    text =
+                        "Selecciona el campo que deseas visitar",
 
-                    color = Color(0xFF0F172A),
+                    color =
+                        Color(0xFF0F172A),
 
-                    fontSize = 16.sp,
+                    fontSize =
+                        16.sp,
 
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight =
+                        FontWeight.SemiBold,
 
-                    textAlign = TextAlign.Center
-
+                    textAlign =
+                        TextAlign.Center
                 )
 
 
                 Spacer(
-                    modifier = Modifier.height(18.dp)
+
+                    modifier =
+                        Modifier.height(
+                            18.dp
+                        )
                 )
 
 
-                // =================================================
-                // PRIMERA FILA
-                // =================================================
-                //
-                // Trastornos del ritmo | Vida saludable
-                //
+                // =============================================================
+                // FILA 1
+                // =============================================================
 
                 Row(
 
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 430.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .widthIn(
+                                max = 430.dp
+                            ),
 
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            14.dp
+                        )
                 ) {
 
-
-                    // ------------------------------------------------
+                    // ---------------------------------------------------------
                     // TRASTORNOS DEL RITMO
-                    // ------------------------------------------------
+                    // ---------------------------------------------------------
 
                     HomeCategoryCard(
 
-                        modifier = Modifier.weight(1f),
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
 
-                        title = "Trastornos del ritmo",
+                        title =
+                            "Trastornos del ritmo",
 
-                        subtitle = "Seguimiento y orientación",
+                        subtitle =
+                            "Seguimiento y orientación",
 
-                        backgroundColor = Color(0xFFF7FCEB),
+                        backgroundColor =
+                            Color(0xFFF7FCEB),
 
                         icon = {
 
                             Icon(
 
-                                imageVector = Icons.Default.Favorite,
+                                imageVector =
+                                    Icons.Default.Favorite,
 
-                                contentDescription = "Trastornos del ritmo",
+                                contentDescription =
+                                    null,
 
-                                tint = Color(0xFFEF4444),
+                                tint =
+                                    Color(0xFFEF4444),
 
-                                modifier = Modifier.size(42.dp)
-
+                                modifier =
+                                    Modifier.size(
+                                        42.dp
+                                    )
                             )
-
                         },
 
-                        onClick = onRhythmClick
-
+                        onClick =
+                            onRhythmClick
                     )
 
 
-                    // ------------------------------------------------
+                    // ---------------------------------------------------------
                     // VIDA SALUDABLE
-                    // ------------------------------------------------
+                    // ---------------------------------------------------------
 
                     HomeCategoryCard(
 
-                        modifier = Modifier.weight(1f),
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
 
-                        title = "Vida saludable",
+                        title =
+                            "Vida saludable",
 
-                        subtitle = "Hábitos y bienestar",
+                        subtitle =
+                            "Hábitos y bienestar",
 
-                        backgroundColor = Color(0xFFEAF8FF),
+                        backgroundColor =
+                            Color(0xFFEAF8FF),
 
                         icon = {
 
                             Icon(
 
-                                imageVector = Icons.Default.Spa,
+                                imageVector =
+                                    Icons.Default.Spa,
 
-                                contentDescription = "Vida saludable",
+                                contentDescription =
+                                    null,
 
-                                tint = Color(0xFF0284C7),
+                                tint =
+                                    Color(0xFF0284C7),
 
-                                modifier = Modifier.size(42.dp)
-
+                                modifier =
+                                    Modifier.size(
+                                        42.dp
+                                    )
                             )
-
                         },
 
-                        onClick = onHealthyLifeClick
-
+                        onClick =
+                            onHealthyLifeClick
                     )
-
                 }
 
 
-                // Espacio entre la primera y segunda fila.
                 Spacer(
-                    modifier = Modifier.height(14.dp)
+
+                    modifier =
+                        Modifier.height(
+                            14.dp
+                        )
                 )
 
 
-                // =================================================
-                // SEGUNDA FILA
-                // =================================================
-                //
-                // Mi Agenda | Diabetes Mellitus
-                //
+                // =============================================================
+                // FILA 2
+                // =============================================================
 
                 Row(
 
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 430.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .widthIn(
+                                max = 430.dp
+                            ),
 
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            14.dp
+                        )
                 ) {
 
-
-                    // ------------------------------------------------
+                    // ---------------------------------------------------------
                     // MI AGENDA
-                    // ------------------------------------------------
+                    // ---------------------------------------------------------
 
                     HomeCategoryCard(
 
-                        modifier = Modifier.weight(1f),
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
 
-                        title = "Mi Agenda",
+                        title =
+                            "Mi Agenda",
 
-                        subtitle = "Medicamentos, citas y estudios",
+                        subtitle =
+                            "Medicamentos, citas y estudios",
 
-                        backgroundColor = Color(0xFFE8F7EE),
+                        backgroundColor =
+                            Color(0xFFE9F8F0),
 
                         icon = {
 
                             Icon(
 
-                                imageVector = Icons.Default.CalendarMonth,
+                                imageVector =
+                                    Icons.Default.CalendarMonth,
 
-                                contentDescription = "Mi Agenda",
+                                contentDescription =
+                                    null,
 
-                                tint = Color(0xFF0F766E),
+                                tint =
+                                    Color(0xFF0F766E),
 
-                                modifier = Modifier.size(42.dp)
-
+                                modifier =
+                                    Modifier.size(
+                                        42.dp
+                                    )
                             )
-
                         },
 
-                        onClick = onAgendaClick
-
+                        onClick =
+                            onAgendaClick
                     )
 
 
-                    // ------------------------------------------------
-                    // DIABETES MELLITUS
-                    // ------------------------------------------------
+                    // ---------------------------------------------------------
+                    // DIABETES
+                    // ---------------------------------------------------------
 
                     HomeCategoryCard(
 
-                        modifier = Modifier.weight(1f),
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
 
-                        title = "Diabetes Mellitus",
+                        title =
+                            "Diabetes Mellitus",
 
-                        subtitle = "Control y prevención",
+                        subtitle =
+                            "Control y prevención",
 
-                        backgroundColor = Color(0xFFFBFFCC),
+                        backgroundColor =
+                            Color(0xFFFBFFCC),
 
                         icon = {
 
                             Icon(
 
-                                imageVector = Icons.Default.HealthAndSafety,
+                                imageVector =
+                                    Icons.Default.HealthAndSafety,
 
-                                contentDescription = "Diabetes Mellitus",
+                                contentDescription =
+                                    null,
 
-                                tint = Color(0xFF86A327),
+                                tint =
+                                    Color(0xFF86A327),
 
-                                modifier = Modifier.size(42.dp)
-
+                                modifier =
+                                    Modifier.size(
+                                        44.dp
+                                    )
                             )
-
                         },
 
-                        onClick = onDiabetesClick
-
+                        onClick =
+                            onDiabetesClick
                     )
-
                 }
 
 
                 Spacer(
-                    modifier = Modifier.height(40.dp)
+
+                    modifier =
+                        Modifier.height(
+                            40.dp
+                        )
                 )
 
 
-                // =================================================
-                // BARRA DECORATIVA INFERIOR
-                // =================================================
+                // =============================================================
+                // BARRA DECORATIVA
+                // =============================================================
 
                 Box(
 
-                    modifier = Modifier
-
-                        .fillMaxWidth()
-
-                        .widthIn(max = 430.dp)
-
-                        .height(58.dp)
-
-                        .clip(
-
-                            RoundedCornerShape(
-
-                                topStart = 28.dp,
-
-                                topEnd = 28.dp
-
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .widthIn(
+                                max = 430.dp
                             )
-
-                        )
-
-                        .background(
-                            Color(0xFFCFE8B5)
-                        )
-
+                            .height(
+                                58.dp
+                            )
+                            .clip(
+                                RoundedCornerShape(
+                                    topStart = 28.dp,
+                                    topEnd = 28.dp
+                                )
+                            )
+                            .background(
+                                Color(0xFFCFE8B5)
+                            )
                 )
-
             }
-
         }
-
     }
-
 }
 
 
-// ============================================================
-// BARRA SUPERIOR
-// ============================================================
+// ============================================================================
+// TOP BAR
+// ============================================================================
 
 @Composable
 fun HomeTopBar(
@@ -562,414 +584,451 @@ fun HomeTopBar(
     onMenuClick: () -> Unit,
 
     onProfileClick: () -> Unit
-
 ) {
 
     Row(
 
-        modifier = Modifier
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .widthIn(
+                    max = 430.dp
+                )
+                .defaultMinSize(
+                    minHeight = 56.dp
+                ),
 
-            .fillMaxWidth()
-
-            .widthIn(max = 430.dp)
-
-            .defaultMinSize(
-                minHeight = 56.dp
-            ),
-
-        verticalAlignment = Alignment.CenterVertically
-
+        verticalAlignment =
+            Alignment.CenterVertically
     ) {
-
-
-        // --------------------------------------------------------
-        // BOTÓN DEL MENÚ
-        // --------------------------------------------------------
 
         IconButton(
 
-            onClick = onMenuClick
-
+            onClick =
+                onMenuClick
         ) {
 
             Icon(
 
-                imageVector = Icons.Default.Menu,
+                imageVector =
+                    Icons.Default.Menu,
 
-                contentDescription = "Abrir menú",
+                contentDescription =
+                    "Abrir menú",
 
-                tint = Color(0xFF6B8E23),
+                tint =
+                    Color(0xFF6B8E23),
 
-                modifier = Modifier.size(30.dp)
-
+                modifier =
+                    Modifier.size(
+                        30.dp
+                    )
             )
-
         }
 
-
-        // --------------------------------------------------------
-        // SALUDO
-        // --------------------------------------------------------
 
         Text(
 
-            text = "Hola, $userName",
+            text =
+                "Hola, $userName",
 
-            color = Color(0xFF0F172A),
+            color =
+                Color(0xFF0F172A),
 
-            fontSize = 17.sp,
+            fontSize =
+                17.sp,
 
-            fontWeight = FontWeight.Bold,
+            fontWeight =
+                FontWeight.Bold,
 
-            modifier = Modifier.weight(1f)
-
+            modifier =
+                Modifier.weight(
+                    1f
+                )
         )
 
 
-        // --------------------------------------------------------
-        // PERFIL
-        // --------------------------------------------------------
-
         Box(
 
-            modifier = Modifier
+            modifier =
+                Modifier
+                    .size(
+                        46.dp
+                    )
+                    .clip(
+                        CircleShape
+                    )
+                    .background(
+                        Color(0xFFFFE7C7)
+                    )
+                    .clickable {
 
-                .size(46.dp)
+                        onProfileClick()
+                    },
 
-                .clip(CircleShape)
-
-                .background(
-                    Color(0xFFFFE7C7)
-                )
-
-                .clickable {
-
-                    onProfileClick()
-
-                },
-
-            contentAlignment = Alignment.Center
-
+            contentAlignment =
+                Alignment.Center
         ) {
 
             Icon(
 
-                imageVector = Icons.Default.AccountCircle,
+                imageVector =
+                    Icons.Default.AccountCircle,
 
-                contentDescription = "Perfil",
+                contentDescription =
+                    "Perfil",
 
-                tint = Color(0xFF7C4A2D),
+                tint =
+                    Color(0xFF7C4A2D),
 
-                modifier = Modifier.size(36.dp)
-
+                modifier =
+                    Modifier.size(
+                        36.dp
+                    )
             )
-
         }
-
     }
-
 }
 
 
-// ============================================================
-// TARJETA DE FITY
-// ============================================================
+// ============================================================================
+// TARJETA DE NUBY
+// ============================================================================
 
 @Composable
-fun MascotPresentationCard() {
+fun MascotPresentationCard(
 
+    onNubyClick: () -> Unit
+) {
 
-    // Texto que será leído por TextToSpeech.
-    val presentationText = """
+    val presentationText =
+        """
+        Hola, soy Nuby, tu guía interactiva de Vibra la vida.
 
-        Conoce a Fity, tu acompañante dentro de la aplicación.
-
-        Te enviará recordatorios, mensajes de motivación y apoyo para ayudarte a cuidar tu bienestar día a día.
-
-    """.trimIndent()
+        Puedo orientarte sobre alimentación, actividad física, sueño, hábitos saludables y ayudarte a resolver tus dudas dentro de la aplicación.
+        """.trimIndent()
 
 
     Card(
 
-        modifier = Modifier
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .widthIn(
+                    max = 430.dp
+                ),
 
-            .fillMaxWidth()
+        shape =
+            RoundedCornerShape(
+                28.dp
+            ),
 
-            .widthIn(max = 430.dp),
+        colors =
+            CardDefaults.cardColors(
 
-        shape = RoundedCornerShape(28.dp),
+                containerColor =
+                    Color(0xFFFEFFF6)
+            ),
 
-        colors = CardDefaults.cardColors(
+        elevation =
+            CardDefaults.cardElevation(
 
-            containerColor = Color(0xFFFEFFF6)
-
-        ),
-
-        elevation = CardDefaults.cardElevation(
-
-            defaultElevation = 8.dp
-
-        )
-
+                defaultElevation =
+                    8.dp
+            )
     ) {
-
 
         Column(
 
-            modifier = Modifier
-
-                .fillMaxWidth()
-
-                .padding(18.dp)
-
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        18.dp
+                    )
         ) {
-
 
             Row(
 
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier.fillMaxWidth(),
 
-                verticalAlignment = Alignment.CenterVertically
-
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
 
+                // =============================================================
+                // IMAGEN REAL DE NUBY
+                // =============================================================
 
-                // ----------------------------------------------------
-                // IMAGEN TEMPORAL DE FITY
-                // ----------------------------------------------------
+                MascotImage(
 
-                MascotImagePlaceholder(
-
-                    modifier = Modifier.size(118.dp)
-
+                    modifier =
+                        Modifier.size(
+                            118.dp
+                        )
                 )
 
 
                 Spacer(
-                    modifier = Modifier.width(14.dp)
+
+                    modifier =
+                        Modifier.width(
+                            14.dp
+                        )
                 )
 
 
                 Column(
 
-                    modifier = Modifier.weight(1f)
-
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
                 ) {
-
 
                     Text(
 
-                        text = "Conoce a “Fity”",
+                        text =
+                            "Conoce a “Nuby”",
 
-                        color = Color(0xFF0F766E),
+                        color =
+                            Color(0xFF0F766E),
 
-                        fontSize = 17.sp,
+                        fontSize =
+                            17.sp,
 
-                        fontWeight = FontWeight.Bold
-
+                        fontWeight =
+                            FontWeight.Bold
                     )
 
 
                     Spacer(
-                        modifier = Modifier.height(6.dp)
+
+                        modifier =
+                            Modifier.height(
+                                6.dp
+                            )
                     )
 
 
                     Text(
 
-                        text = "Tu personaje especial te acompañará dentro de la aplicación.",
+                        text =
+                            "Tu guía interactiva dentro de Vibra la vida.",
 
-                        color = Color(0xFF334155),
+                        color =
+                            Color(0xFF334155),
 
-                        fontSize = 13.sp,
+                        fontSize =
+                            13.sp,
 
-                        lineHeight = 18.sp,
+                        lineHeight =
+                            18.sp,
 
-                        fontWeight = FontWeight.Medium
-
+                        fontWeight =
+                            FontWeight.Medium
                     )
-
                 }
-
             }
 
 
             Spacer(
-                modifier = Modifier.height(14.dp)
+
+                modifier =
+                    Modifier.height(
+                        14.dp
+                    )
             )
 
 
             Text(
 
-                text = "Te enviará recordatorios y mensajes de motivación para ayudarte a cuidar tu bienestar.",
+                text =
+                    "Nuby puede orientarte, resolver dudas y acompañarte en el cuidado de tus hábitos y bienestar.",
 
-                color = Color(0xFF334155),
+                color =
+                    Color(0xFF334155),
 
-                fontSize = 13.sp,
+                fontSize =
+                    13.sp,
 
-                lineHeight = 19.sp,
+                lineHeight =
+                    19.sp,
 
-                textAlign = TextAlign.Justify
-
+                textAlign =
+                    TextAlign.Justify
             )
 
 
             Spacer(
-                modifier = Modifier.height(14.dp)
+
+                modifier =
+                    Modifier.height(
+                        14.dp
+                    )
             )
 
 
-            // --------------------------------------------------------
-            // BOTONES DE FITY
-            // --------------------------------------------------------
-
             Row(
 
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier.fillMaxWidth(),
 
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        10.dp
+                    ),
 
-                verticalAlignment = Alignment.CenterVertically
-
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
 
+                // =============================================================
+                // ESCUCHAR
+                // =============================================================
 
-                // Botón para escuchar a Fity.
                 TextToSpeechButton(
 
-                    textToRead = presentationText,
+                    textToRead =
+                        presentationText,
 
-                    modifier = Modifier.weight(1f)
-
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
                 )
 
 
-                // Botón para futura presentación visual.
+                // =============================================================
+                // ENTRAR A NUBY
+                // =============================================================
+
                 Button(
 
-                    onClick = {
+                    onClick =
+                        onNubyClick,
 
-                        println(
-                            "Reproducir presentación visual"
+                    modifier =
+                        Modifier.height(
+                            44.dp
+                        ),
+
+                    shape =
+                        RoundedCornerShape(
+                            18.dp
+                        ),
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+
+                            containerColor =
+                                Color(0xFFBFEA7C),
+
+                            contentColor =
+                                Color(0xFF0F766E)
+                        ),
+
+                    contentPadding =
+                        PaddingValues(
+                            horizontal = 12.dp
                         )
-
-                    },
-
-                    modifier = Modifier.height(44.dp),
-
-                    shape = RoundedCornerShape(18.dp),
-
-                    colors = ButtonDefaults.buttonColors(
-
-                        containerColor = Color(0xFFBFEA7C),
-
-                        contentColor = Color(0xFF0F766E)
-
-                    ),
-
-                    contentPadding = PaddingValues(
-
-                        horizontal = 12.dp
-
-                    )
-
                 ) {
 
                     Icon(
 
-                        imageVector = Icons.Default.PlayArrow,
+                        imageVector =
+                            Icons.Default.PlayArrow,
 
-                        contentDescription = "Reproducir",
+                        contentDescription =
+                            "Abrir Nuby",
 
-                        modifier = Modifier.size(22.dp)
-
+                        modifier =
+                            Modifier.size(
+                                22.dp
+                            )
                     )
-
                 }
-
             }
-
         }
-
     }
-
 }
 
 
-// ============================================================
-// IMAGEN TEMPORAL DE FITY
-// ============================================================
+// ============================================================================
+// IMAGEN DE NUBY
+// ============================================================================
 
 @Composable
-fun MascotImagePlaceholder(
-
+fun MascotImage(
     modifier: Modifier = Modifier
-
 ) {
 
     Box(
 
-        modifier = modifier
-
-            .clip(
-                RoundedCornerShape(24.dp)
-            )
-
-            .background(
-
-                brush = Brush.radialGradient(
-
-                    colors = listOf(
-
-                        Color(0xFFB8F7E8),
-
-                        Color(0xFFF7FCEB)
-
+        modifier =
+            modifier
+                .clip(
+                    RoundedCornerShape(
+                        24.dp
                     )
-
                 )
+                .background(
 
-            ),
+                    brush =
+                        Brush.radialGradient(
 
-        contentAlignment = Alignment.Center
+                            colors =
+                                listOf(
 
+                                    Color(0xFFB8F7E8),
+
+                                    Color(0xFFF7FCEB)
+                                )
+                        )
+                )
+                .padding(
+                    4.dp
+                ),
+
+        contentAlignment =
+            Alignment.Center
     ) {
 
+        Image(
 
-        /*
-         * Cuando tengamos la imagen real de Fity,
-         * este icono se podrá reemplazar por:
-         *
-         * Image(
-         *     painter = painterResource(
-         *         id = R.drawable.fity
-         *     ),
-         *     contentDescription = "Fity",
-         *     modifier = Modifier.fillMaxSize()
-         * )
-         */
+            painter =
+                painterResource(
+                    id =
+                        R.drawable.nuby_saludo
+                ),
 
+            contentDescription =
+                "Nuby, mascota virtual de Vibra la vida",
 
-        Icon(
+            modifier =
+                Modifier.fillMaxSize(),
 
-            imageVector = Icons.Default.Spa,
-
-            contentDescription = "Fity",
-
-            tint = Color(0xFF0F766E),
-
-            modifier = Modifier.size(52.dp)
-
+            contentScale =
+                ContentScale.Fit
         )
-
     }
-
 }
 
 
-// ============================================================
-// BOTÓN PARA TEXTO A VOZ
-// ============================================================
+// ============================================================================
+// TTS DE NUBY
+// ============================================================================
+//
+// Ya NO creamos un TextToSpeech independiente aquí.
+//
+// Reutilizamos NubyTtsManager para:
+// - es-MX
+// - mejor selección de voz disponible
+// - velocidad 0.92
+// - tono 1.05
+//
+// ============================================================================
 
 @Composable
 fun TextToSpeechButton(
@@ -977,591 +1036,548 @@ fun TextToSpeechButton(
     textToRead: String,
 
     modifier: Modifier = Modifier
-
 ) {
 
-
-    // Obtiene el contexto actual de Android.
-    val context = LocalContext.current
-
-
-    // Guarda el motor TextToSpeech.
-    var textToSpeech by remember {
-
-        mutableStateOf<TextToSpeech?>(null)
-
-    }
+    val context =
+        LocalContext.current
 
 
-    // Indica si el motor ya está listo.
-    var isReady by remember {
+    val nubyTtsManager =
+        remember {
 
-        mutableStateOf(false)
-
-    }
-
-
-    // --------------------------------------------------------
-    // INICIALIZAR TEXT TO SPEECH
-    // --------------------------------------------------------
-
-    DisposableEffect(Unit) {
-
-
-        val tts = TextToSpeech(context) { status ->
-
-
-            if (status == TextToSpeech.SUCCESS) {
-
-
-                // Configura español de México.
-                textToSpeech?.language = Locale(
-                    "es",
-                    "MX"
-                )
-
-
-                isReady = true
-
-            }
-
+            NubyTtsManager(
+                context
+            )
         }
 
 
-        // Guarda el motor creado.
-        textToSpeech = tts
-
-
-        // ----------------------------------------------------
-        // LIBERAR RECURSOS
-        // ----------------------------------------------------
+    DisposableEffect(
+        Unit
+    ) {
 
         onDispose {
 
-            tts.stop()
-
-            tts.shutdown()
-
+            nubyTtsManager.shutdown()
         }
-
     }
 
-
-    // --------------------------------------------------------
-    // BOTÓN ESCUCHAR
-    // --------------------------------------------------------
 
     Button(
 
         onClick = {
 
-
-            if (isReady) {
-
-
-                textToSpeech?.speak(
-
-                    textToRead,
-
-                    TextToSpeech.QUEUE_FLUSH,
-
-                    null,
-
-                    "vibra_la_vida_presentacion"
-
-                )
-
-            }
-
+            nubyTtsManager.speak(
+                textToRead
+            )
         },
 
-        modifier = modifier.height(44.dp),
+        modifier =
+            modifier.height(
+                44.dp
+            ),
 
-        shape = RoundedCornerShape(18.dp),
+        shape =
+            RoundedCornerShape(
+                18.dp
+            ),
 
-        colors = ButtonDefaults.buttonColors(
+        colors =
+            ButtonDefaults.buttonColors(
 
-            containerColor = Color(0xFF0F766E),
+                containerColor =
+                    Color(0xFF0F766E),
 
-            contentColor = Color.White
+                contentColor =
+                    Color.White
+            ),
 
-        ),
-
-        contentPadding = PaddingValues(
-
-            horizontal = 14.dp
-
-        )
-
+        contentPadding =
+            PaddingValues(
+                horizontal = 14.dp
+            )
     ) {
-
 
         Icon(
 
-            imageVector = Icons.Default.VolumeUp,
+            imageVector =
+                Icons.Default.VolumeUp,
 
-            contentDescription = "Escuchar",
+            contentDescription =
+                null,
 
-            modifier = Modifier.size(19.dp)
-
+            modifier =
+                Modifier.size(
+                    19.dp
+                )
         )
 
 
         Spacer(
-            modifier = Modifier.width(8.dp)
+
+            modifier =
+                Modifier.width(
+                    8.dp
+                )
         )
 
 
         Text(
 
-            text = "Escuchar",
+            text =
+                "Escuchar",
 
-            fontSize = 14.sp,
+            fontSize =
+                14.sp,
 
-            fontWeight = FontWeight.Bold
-
+            fontWeight =
+                FontWeight.Bold
         )
-
     }
-
 }
 
 
-// ============================================================
-// TARJETA REUTILIZABLE DE CATEGORÍAS
-// ============================================================
+// ============================================================================
+// TARJETA DE CATEGORÍA
+// ============================================================================
 
 @Composable
 fun HomeCategoryCard(
 
     modifier: Modifier = Modifier,
 
-    // Nombre de la categoría.
     title: String,
 
-    // Pequeña explicación.
     subtitle: String,
 
-    // Fondo de la tarjeta.
     backgroundColor: Color,
 
-    // Icono mostrado en la tarjeta.
     icon: @Composable () -> Unit,
 
-    // Acción del botón.
     onClick: () -> Unit
-
 ) {
-
 
     Card(
 
-        modifier = modifier
-
-            // Todas las tarjetas tendrán como mínimo
-            // la misma altura.
-            .defaultMinSize(
-                minHeight = 170.dp
+        modifier =
+            modifier.defaultMinSize(
+                minHeight = 155.dp
             ),
 
-        shape = RoundedCornerShape(24.dp),
+        shape =
+            RoundedCornerShape(
+                24.dp
+            ),
 
-        colors = CardDefaults.cardColors(
+        colors =
+            CardDefaults.cardColors(
 
-            containerColor = backgroundColor
+                containerColor =
+                    backgroundColor
+            ),
 
-        ),
+        elevation =
+            CardDefaults.cardElevation(
 
-        elevation = CardDefaults.cardElevation(
-
-            defaultElevation = 6.dp
-
-        )
-
+                defaultElevation =
+                    6.dp
+            )
     ) {
-
 
         Column(
 
-            modifier = Modifier
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        14.dp
+                    ),
 
-                .fillMaxSize()
+            horizontalAlignment =
+                Alignment.CenterHorizontally,
 
-                .padding(14.dp),
-
-            horizontalAlignment = Alignment.CenterHorizontally,
-
-            verticalArrangement = Arrangement.Center
-
+            verticalArrangement =
+                Arrangement.Center
         ) {
-
-
-            // --------------------------------------------------------
-            // ICONO
-            // --------------------------------------------------------
 
             Box(
 
-                modifier = Modifier
-
-                    .size(58.dp)
-
-                    .clip(
-                        RoundedCornerShape(18.dp)
-                    )
-
-                    .background(
-
-                        Color.White.copy(
-                            alpha = 0.72f
+                modifier =
+                    Modifier
+                        .size(
+                            58.dp
                         )
+                        .clip(
+                            RoundedCornerShape(
+                                18.dp
+                            )
+                        )
+                        .background(
 
-                    ),
+                            Color.White.copy(
+                                alpha = 0.72f
+                            )
+                        ),
 
-                contentAlignment = Alignment.Center
-
+                contentAlignment =
+                    Alignment.Center
             ) {
 
-
                 icon()
-
             }
 
 
             Spacer(
-                modifier = Modifier.height(10.dp)
+
+                modifier =
+                    Modifier.height(
+                        10.dp
+                    )
             )
 
 
-            // --------------------------------------------------------
-            // TÍTULO
-            // --------------------------------------------------------
-
             Text(
 
-                text = title,
+                text =
+                    title,
 
-                color = Color(0xFF0F172A),
+                color =
+                    Color(0xFF0F172A),
 
-                fontSize = 13.sp,
+                fontSize =
+                    13.sp,
 
-                fontWeight = FontWeight.Bold,
+                fontWeight =
+                    FontWeight.Bold,
 
-                textAlign = TextAlign.Center,
+                textAlign =
+                    TextAlign.Center,
 
-                lineHeight = 16.sp
-
+                lineHeight =
+                    16.sp
             )
 
 
             Spacer(
-                modifier = Modifier.height(4.dp)
+
+                modifier =
+                    Modifier.height(
+                        4.dp
+                    )
             )
 
 
-            // --------------------------------------------------------
-            // DESCRIPCIÓN
-            // --------------------------------------------------------
-
             Text(
 
-                text = subtitle,
+                text =
+                    subtitle,
 
-                color = Color(0xFF64748B),
+                color =
+                    Color(0xFF64748B),
 
-                fontSize = 11.sp,
+                fontSize =
+                    11.sp,
 
-                textAlign = TextAlign.Center,
+                textAlign =
+                    TextAlign.Center,
 
-                lineHeight = 14.sp
-
+                lineHeight =
+                    14.sp
             )
 
 
             Spacer(
-                modifier = Modifier.height(10.dp)
+
+                modifier =
+                    Modifier.height(
+                        10.dp
+                    )
             )
 
-
-            // --------------------------------------------------------
-            // BOTÓN VAMOS
-            // --------------------------------------------------------
 
             Button(
 
-                onClick = onClick,
+                onClick =
+                    onClick,
 
-                modifier = Modifier.height(32.dp),
+                modifier =
+                    Modifier.height(
+                        32.dp
+                    ),
 
-                shape = RoundedCornerShape(16.dp),
+                shape =
+                    RoundedCornerShape(
+                        16.dp
+                    ),
 
-                colors = ButtonDefaults.buttonColors(
+                colors =
+                    ButtonDefaults.buttonColors(
 
-                    containerColor = Color(0xFF86A327),
+                        containerColor =
+                            Color(0xFF86A327),
 
-                    contentColor = Color.White
+                        contentColor =
+                            Color.White
+                    ),
 
-                ),
-
-                contentPadding = PaddingValues(
-
-                    horizontal = 16.dp,
-
-                    vertical = 0.dp
-
-                )
-
+                contentPadding =
+                    PaddingValues(
+                        horizontal = 16.dp,
+                        vertical = 0.dp
+                    )
             ) {
-
 
                 Text(
 
-                    text = "Vamos",
+                    text =
+                        "Vamos",
 
-                    fontSize = 12.sp,
+                    fontSize =
+                        12.sp,
 
-                    fontWeight = FontWeight.Bold
-
+                    fontWeight =
+                        FontWeight.Bold
                 )
-
             }
-
         }
-
     }
-
 }
 
 
-// ============================================================
-// MENÚ LATERAL
-// ============================================================
+// ============================================================================
+// DRAWER
+// ============================================================================
 
 @Composable
 fun HomeDrawerContent(
-
     onClose: () -> Unit
-
 ) {
-
 
     Column(
 
-        modifier = Modifier
-
-            .fillMaxHeight()
-
-            .width(280.dp)
-
-            .background(
-                Color(0xFFFEFFF6)
-            )
-
-            .padding(18.dp)
-
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .width(
+                    280.dp
+                )
+                .background(
+                    Color(0xFFFEFFF6)
+                )
+                .padding(
+                    18.dp
+                )
     ) {
-
-
-        // --------------------------------------------------------
-        // ENCABEZADO
-        // --------------------------------------------------------
 
         Row(
 
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier.fillMaxWidth(),
 
-            verticalAlignment = Alignment.CenterVertically
-
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
-
 
             Text(
 
-                text = "Vibra la vida",
+                text =
+                    "Vibra la vida",
 
-                color = Color(0xFF0F766E),
+                color =
+                    Color(0xFF0F766E),
 
-                fontSize = 22.sp,
+                fontSize =
+                    22.sp,
 
-                fontWeight = FontWeight.Bold,
+                fontWeight =
+                    FontWeight.Bold,
 
-                modifier = Modifier.weight(1f)
-
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
             )
 
 
             IconButton(
 
-                onClick = onClose
-
+                onClick =
+                    onClose
             ) {
-
 
                 Icon(
 
-                    imageVector = Icons.Default.Close,
+                    imageVector =
+                        Icons.Default.Close,
 
-                    contentDescription = "Cerrar menú",
+                    contentDescription =
+                        "Cerrar menú",
 
-                    tint = Color(0xFF64748B)
-
+                    tint =
+                        Color(0xFF64748B)
                 )
-
             }
-
         }
 
 
         Spacer(
-            modifier = Modifier.height(18.dp)
+
+            modifier =
+                Modifier.height(
+                    18.dp
+                )
         )
 
 
         Text(
 
-            text = "Menú",
+            text =
+                "Menú",
 
-            color = Color(0xFF64748B),
+            color =
+                Color(0xFF64748B),
 
-            fontSize = 14.sp,
+            fontSize =
+                14.sp,
 
-            fontWeight = FontWeight.SemiBold
-
+            fontWeight =
+                FontWeight.SemiBold
         )
 
 
         Spacer(
-            modifier = Modifier.height(12.dp)
+
+            modifier =
+                Modifier.height(
+                    12.dp
+                )
         )
 
-
-        // --------------------------------------------------------
-        // INICIO
-        // --------------------------------------------------------
 
         NavigationDrawerItem(
 
             label = {
 
                 Text(
-                    text = "Inicio"
+                    text =
+                        "Inicio"
                 )
-
             },
 
-            selected = true,
+            selected =
+                true,
 
-            onClick = onClose,
+            onClick =
+                onClose,
 
             icon = {
 
                 Icon(
 
-                    imageVector = Icons.Default.Spa,
+                    imageVector =
+                        Icons.Default.Spa,
 
-                    contentDescription = null
-
+                    contentDescription =
+                        null
                 )
-
             },
 
-            colors = NavigationDrawerItemDefaults.colors(
+            colors =
+                NavigationDrawerItemDefaults.colors(
 
-                selectedContainerColor = Color(0xFFD9F99D),
+                    selectedContainerColor =
+                        Color(0xFFD9F99D),
 
-                selectedIconColor = Color(0xFF0F766E),
+                    selectedIconColor =
+                        Color(0xFF0F766E),
 
-                selectedTextColor = Color(0xFF0F766E)
-
-            )
-
+                    selectedTextColor =
+                        Color(0xFF0F766E)
+                )
         )
 
-
-        // --------------------------------------------------------
-        // RECORDATORIOS
-        // --------------------------------------------------------
 
         NavigationDrawerItem(
 
             label = {
 
                 Text(
-                    text = "Recordatorios"
+                    text =
+                        "Recordatorios"
                 )
-
             },
 
-            selected = false,
+            selected =
+                false,
 
-            onClick = onClose,
+            onClick =
+                onClose,
 
             icon = {
 
                 Icon(
 
-                    imageVector = Icons.Default.Favorite,
+                    imageVector =
+                        Icons.Default.Favorite,
 
-                    contentDescription = null
-
+                    contentDescription =
+                        null
                 )
-
             }
-
         )
 
-
-        // --------------------------------------------------------
-        // CONFIGURACIÓN
-        // --------------------------------------------------------
 
         NavigationDrawerItem(
 
             label = {
 
                 Text(
-                    text = "Configuración"
+                    text =
+                        "Configuración"
                 )
-
             },
 
-            selected = false,
+            selected =
+                false,
 
-            onClick = onClose,
+            onClick =
+                onClose,
 
             icon = {
 
                 Icon(
 
-                    imageVector = Icons.Default.AccountCircle,
+                    imageVector =
+                        Icons.Default.AccountCircle,
 
-                    contentDescription = null
-
+                    contentDescription =
+                        null
                 )
-
             }
-
         )
 
 
-        // Empuja el texto inferior hasta abajo.
         Spacer(
-            modifier = Modifier.weight(1f)
+
+            modifier =
+                Modifier.weight(
+                    1f
+                )
         )
 
 
         Text(
 
-            text = "Este menú queda como base para futuras opciones.",
+            text =
+                "Este menú queda como base para futuras opciones.",
 
-            color = Color(0xFF94A3B8),
+            color =
+                Color(0xFF94A3B8),
 
-            fontSize = 12.sp,
+            fontSize =
+                12.sp,
 
-            lineHeight = 16.sp
-
+            lineHeight =
+                16.sp
         )
-
     }
-
 }

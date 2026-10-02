@@ -189,6 +189,38 @@ fun RegisterScreen(
 
 
     // ========================================================================
+    // REQUISITOS DE CONTRASEÑA
+    // ========================================================================
+
+    val passwordHasMinLength =
+        password.length >= 8
+
+
+    val passwordHasUppercase =
+        password.any {
+            it.isUpperCase()
+        }
+
+
+    val passwordHasLowercase =
+        password.any {
+            it.isLowerCase()
+        }
+
+
+    val passwordHasNumber =
+        password.any {
+            it.isDigit()
+        }
+
+
+    val passwordHasSymbol =
+        password.any {
+            !it.isLetterOrDigit()
+        }
+
+
+    // ========================================================================
     // INTERFAZ
     // ========================================================================
 
@@ -502,6 +534,30 @@ fun RegisterScreen(
                                 )
                             }
                         }
+                    )
+
+
+
+                    // =========================================================
+                    // REQUISITOS DE CONTRASEÑA
+                    // =========================================================
+
+                    PasswordRequirementsCard(
+
+                        minLength =
+                            passwordHasMinLength,
+
+                        uppercase =
+                            passwordHasUppercase,
+
+                        lowercase =
+                            passwordHasLowercase,
+
+                        number =
+                            passwordHasNumber,
+
+                        symbol =
+                            passwordHasSymbol
                     )
 
 
@@ -1279,9 +1335,37 @@ fun validateRegisterForm(
             "Ingresa una contraseña."
 
 
-        password.length < 6 ->
+        password.length < 8 ->
 
-            "La contraseña debe tener al menos 6 caracteres."
+            "La contraseña debe tener al menos 8 caracteres."
+
+
+        password.none {
+            it.isUpperCase()
+        } ->
+
+            "La contraseña debe incluir al menos una mayúscula."
+
+
+        password.none {
+            it.isLowerCase()
+        } ->
+
+            "La contraseña debe incluir al menos una minúscula."
+
+
+        password.none {
+            it.isDigit()
+        } ->
+
+            "La contraseña debe incluir al menos un número."
+
+
+        password.none {
+            !it.isLetterOrDigit()
+        } ->
+
+            "La contraseña debe incluir al menos un símbolo."
 
 
         confirmPassword.isBlank() ->
@@ -1298,4 +1382,179 @@ fun validateRegisterForm(
 
             ""
     }
+}
+
+
+// ============================================================================
+// TARJETA DE REQUISITOS DE CONTRASEÑA
+// ============================================================================
+
+@Composable
+fun PasswordRequirementsCard(
+
+    minLength: Boolean,
+
+    uppercase: Boolean,
+
+    lowercase: Boolean,
+
+    number: Boolean,
+
+    symbol: Boolean
+
+) {
+
+    Card(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                18.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    Color(0xFFF2F7F7)
+            ),
+
+        elevation =
+            CardDefaults.cardElevation(
+
+                defaultElevation =
+                    0.dp
+            )
+    ) {
+
+
+        Column(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 14.dp
+                    ),
+
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+
+
+            PasswordRequirementItem(
+
+                text =
+                    "8 caracteres mínimo",
+
+                completed =
+                    minLength
+            )
+
+
+            PasswordRequirementItem(
+
+                text =
+                    "Una mayúscula",
+
+                completed =
+                    uppercase
+            )
+
+
+            PasswordRequirementItem(
+
+                text =
+                    "Una minúscula",
+
+                completed =
+                    lowercase
+            )
+
+
+            PasswordRequirementItem(
+
+                text =
+                    "Un número",
+
+                completed =
+                    number
+            )
+
+
+            PasswordRequirementItem(
+
+                text =
+                    "Un símbolo",
+
+                completed =
+                    symbol
+            )
+        }
+    }
+}
+
+
+// ============================================================================
+// ELEMENTO INDIVIDUAL DE REQUISITO
+// ============================================================================
+
+@Composable
+fun PasswordRequirementItem(
+
+    text: String,
+
+    completed: Boolean
+
+) {
+
+    Text(
+
+        text =
+
+            if (
+                completed
+            ) {
+
+                "✓ $text"
+
+            } else {
+
+                "• $text"
+            },
+
+        color =
+
+            if (
+                completed
+            ) {
+
+                Color(0xFF15803D)
+
+            } else {
+
+                Color(0xFF64748B)
+            },
+
+        fontSize =
+            13.sp,
+
+        fontWeight =
+
+            if (
+                completed
+            ) {
+
+                FontWeight.SemiBold
+
+            } else {
+
+                FontWeight.Normal
+            }
+    )
 }
