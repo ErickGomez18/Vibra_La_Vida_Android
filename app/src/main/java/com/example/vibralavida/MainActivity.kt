@@ -167,6 +167,8 @@ import com.example.vibralavida.pantallas_principales.LoginScreen
 import com.example.vibralavida.pantallas_principales.RegisterScreen
 import com.example.vibralavida.pantallas_principales.HomeScreen
 import com.example.vibralavida.pantallas_principales.ProfileScreen
+import com.example.vibralavida.mapa_profesionales.MapaProfesionalesScreen
+import com.example.vibralavida.seguimiento.MiEquipoSaludScreen
 import com.example.vibralavida.agenda.MiAgendaScreen
 import com.example.vibralavida.agenda.historial.HistorialAgendaScreen
 
@@ -484,6 +486,18 @@ enum class Screen {
     // ========================================================================
 
     NubyChat,
+
+    // ========================================================================
+    // MAPA DE PROFESIONALES
+    // ========================================================================
+
+    MapaProfesionales,
+
+    // ========================================================================
+    // MI EQUIPO DE SALUD
+    // ========================================================================
+
+    MiEquipoSalud,
 
 
     // ========================================================================
@@ -1642,9 +1656,88 @@ fun AppScreen() {
 
                     currentScreen =
                         Screen.NubyChat
+                },
+
+
+                // ============================================================
+                // MAPA DE PROFESIONALES
+                // ============================================================
+
+                onProfessionalsMapClick = {
+
+                    currentScreen =
+                        Screen.MapaProfesionales
+                },
+
+
+                // ============================================================
+                // MI EQUIPO DE SALUD
+                // ============================================================
+
+                onHealthTeamClick = {
+
+                    currentScreen =
+                        Screen.MiEquipoSalud
                 }
 
 
+            )
+        }
+
+
+        // ====================================================================
+        // MAPA DE PROFESIONALES
+        // ====================================================================
+
+        Screen.MapaProfesionales -> {
+
+            MapaProfesionalesScreen(
+
+                onBack = {
+
+                    currentScreen =
+                        Screen.Home
+                }
+            )
+        }
+
+
+        // ====================================================================
+        // MI EQUIPO DE SALUD
+        // ====================================================================
+
+        Screen.MiEquipoSalud -> {
+
+            MiEquipoSaludScreen(
+
+                onBack = {
+
+                    currentScreen =
+                        Screen.Home
+                },
+
+                onUnauthorized = {
+
+                    FirebaseAuth
+                        .getInstance()
+                        .signOut()
+
+
+                    Toast
+                        .makeText(
+
+                            context,
+
+                            "Tu sesión no es válida. Inicia sesión nuevamente.",
+
+                            Toast.LENGTH_LONG
+                        )
+                        .show()
+
+
+                    currentScreen =
+                        Screen.Login
+                }
             )
         }
 

@@ -17,14 +17,15 @@ object ApiClient {
     // URL PÚBLICA DE RENDER
     // ========================================================================
     //
-    // Ya no utilizamos la IP local de la laptop.
-    //
     // Esta URL funciona desde:
     //
     // - Wi-Fi de la escuela
     // - Wi-Fi de casa
     // - Datos móviles
     // - Cualquier otra red
+    //
+    // IMPORTANTE:
+    // La URL debe terminar con "/".
     //
     // ========================================================================
 
@@ -36,13 +37,10 @@ object ApiClient {
     // CLIENTE HTTP
     // ========================================================================
     //
-    // Render Free puede "dormir" nuestra API después de un periodo
-    // sin actividad.
+    // Render Free puede tardar varios segundos en despertar
+    // después de estar un tiempo sin actividad.
     //
-    // Cuando vuelve a recibir una petición puede tardar varios segundos
-    // en despertar.
-    //
-    // Por eso aumentamos los tiempos de espera.
+    // Por eso usamos tiempos de espera un poco más largos.
     //
     // ========================================================================
 
@@ -51,25 +49,21 @@ object ApiClient {
         OkHttpClient
             .Builder()
 
-            // Tiempo máximo para establecer conexión.
             .connectTimeout(
                 60,
                 TimeUnit.SECONDS
             )
 
-            // Tiempo máximo esperando una respuesta del servidor.
             .readTimeout(
                 90,
                 TimeUnit.SECONDS
             )
 
-            // Tiempo máximo para enviar información.
             .writeTimeout(
                 60,
                 TimeUnit.SECONDS
             )
 
-            // Tiempo máximo de toda la llamada.
             .callTimeout(
                 90,
                 TimeUnit.SECONDS
@@ -92,7 +86,6 @@ object ApiClient {
                 BASE_URL
             )
 
-            // Usamos nuestro cliente con tiempos mayores.
             .client(
                 okHttpClient
             )
@@ -202,12 +195,28 @@ object ApiClient {
 
 
     // ========================================================================
-    // RESULTADOS / HISTORIAL DE EVALUACIONES
+    // SEGUIMIENTO PROFESIONAL / EQUIPO DE SALUD
     // ========================================================================
     //
-    // Lo utilizamos para guardar IMC y posteriormente podremos reutilizarlo
-    // para calorías, AIS, DASS-21 y otras evaluaciones.
+    // Utiliza:
     //
+    // GET  /api/seguimiento/mis-vinculos
+    // POST /api/seguimiento/:id/codigo
+    // POST /api/seguimiento/:id/autorizar
+    // POST /api/seguimiento/:id/rechazar
+    //
+    // ========================================================================
+
+    val seguimientoPacienteApi: SeguimientoPacienteApi by lazy {
+
+        retrofit.create(
+            SeguimientoPacienteApi::class.java
+        )
+    }
+
+
+    // ========================================================================
+    // RESULTADOS / HISTORIAL DE EVALUACIONES
     // ========================================================================
 
     val resultsApi: ResultsApi by lazy {

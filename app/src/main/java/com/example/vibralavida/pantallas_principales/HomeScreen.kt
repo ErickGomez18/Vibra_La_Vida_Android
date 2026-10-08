@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Spa
@@ -127,7 +128,17 @@ fun HomeScreen(
 
     // NUEVO:
     // abre la pantalla interactiva de Nuby.
-    onNubyClick: () -> Unit
+    onNubyClick: () -> Unit,
+
+    // NUEVO:
+    // abre el mapa de profesionales y consultorios.
+    //
+    // Tiene un valor por defecto para que MainActivity
+    // siga compilando mientras conectamos la nueva pantalla.
+    onProfessionalsMapClick: () -> Unit = {},
+
+    // Abre Mi equipo de salud.
+    onHealthTeamClick: () -> Unit = {}
 ) {
 
     // ========================================================================
@@ -260,6 +271,137 @@ fun HomeScreen(
                     onNubyClick =
                         onNubyClick
                 )
+
+
+                Spacer(
+
+                    modifier =
+                        Modifier.height(
+                            18.dp
+                        )
+                )
+
+
+                // =============================================================
+                // PROFESIONALES CERCA DE TI
+                // =============================================================
+
+                ProfessionalsMapCard(
+
+                    onClick =
+                        onProfessionalsMapClick
+                )
+
+
+                Spacer(
+
+                    modifier =
+                        Modifier.height(
+                            14.dp
+                        )
+                )
+
+
+                // =============================================================
+                // MI EQUIPO DE SALUD
+                // =============================================================
+
+                Card(
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .widthIn(
+                                max = 430.dp
+                            )
+                            .clickable {
+                                onHealthTeamClick()
+                            },
+
+                    shape =
+                        RoundedCornerShape(
+                            22.dp
+                        ),
+
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                Color(0xFFE9F8F0)
+                        )
+                ) {
+
+                    Row(
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    18.dp
+                                ),
+
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+
+                            imageVector =
+                                Icons.Default.HealthAndSafety,
+
+                            contentDescription =
+                                null,
+
+                            tint =
+                                Color(0xFF0F766E),
+
+                            modifier =
+                                Modifier.size(
+                                    40.dp
+                                )
+                        )
+
+
+                        Spacer(
+
+                            modifier =
+                                Modifier.width(
+                                    14.dp
+                                )
+                        )
+
+
+                        Column {
+
+                            Text(
+
+                                text =
+                                    "Mi equipo de salud",
+
+                                color =
+                                    Color(0xFF123B5D),
+
+                                fontWeight =
+                                    FontWeight.Bold,
+
+                                fontSize =
+                                    17.sp
+                            )
+
+
+                            Text(
+
+                                text =
+                                    "Solicitudes y profesionales autorizados",
+
+                                color =
+                                    Color(0xFF64748B),
+
+                                fontSize =
+                                    12.sp
+                            )
+                        }
+                    }
+                }
 
 
                 Spacer(
@@ -1132,6 +1274,237 @@ fun TextToSpeechButton(
             fontWeight =
                 FontWeight.Bold
         )
+    }
+}
+
+
+// ============================================================================
+// TARJETA DE PROFESIONALES
+// ============================================================================
+
+/**
+ * Acceso desde la pantalla principal al futuro mapa de
+ * profesionales y consultorios registrados en Vibra la vida.
+ *
+ * Por ahora esta tarjeta solamente dispara el callback.
+ * La pantalla del mapa se conectará en la siguiente etapa.
+ */
+@Composable
+fun ProfessionalsMapCard(
+
+    onClick: () -> Unit
+) {
+
+
+    Card(
+
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .widthIn(
+                    max = 430.dp
+                ),
+
+        shape =
+            RoundedCornerShape(
+                24.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    Color(0xFFEAF8F4)
+            ),
+
+        elevation =
+            CardDefaults.cardElevation(
+
+                defaultElevation =
+                    6.dp
+            )
+    ) {
+
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        16.dp
+                    ),
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+
+            // ----------------------------------------------------------------
+            // ICONO
+            // ----------------------------------------------------------------
+
+            Box(
+
+                modifier =
+                    Modifier
+                        .size(
+                            58.dp
+                        )
+                        .clip(
+                            RoundedCornerShape(
+                                18.dp
+                            )
+                        )
+                        .background(
+                            Color.White.copy(
+                                alpha = 0.78f
+                            )
+                        ),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+
+                Icon(
+
+                    imageVector =
+                        Icons.Default.LocationOn,
+
+                    contentDescription =
+                        null,
+
+                    tint =
+                        Color(0xFF0F766E),
+
+                    modifier =
+                        Modifier.size(
+                            34.dp
+                        )
+                )
+            }
+
+
+            Spacer(
+
+                modifier =
+                    Modifier.width(
+                        14.dp
+                    )
+            )
+
+
+            // ----------------------------------------------------------------
+            // TEXTO
+            // ----------------------------------------------------------------
+
+            Column(
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            ) {
+
+
+                Text(
+
+                    text =
+                        "Profesionales cerca de ti",
+
+                    color =
+                        Color(0xFF0F172A),
+
+                    fontSize =
+                        15.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+
+                Spacer(
+
+                    modifier =
+                        Modifier.height(
+                            4.dp
+                        )
+                )
+
+
+                Text(
+
+                    text =
+                        "Encuentra especialistas y consultorios registrados en Vibra la vida.",
+
+                    color =
+                        Color(0xFF64748B),
+
+                    fontSize =
+                        11.sp,
+
+                    lineHeight =
+                        15.sp
+                )
+
+
+                Spacer(
+
+                    modifier =
+                        Modifier.height(
+                            10.dp
+                        )
+                )
+
+
+                Button(
+
+                    onClick =
+                        onClick,
+
+                    modifier =
+                        Modifier.height(
+                            34.dp
+                        ),
+
+                    shape =
+                        RoundedCornerShape(
+                            16.dp
+                        ),
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+
+                            containerColor =
+                                Color(0xFF0F766E),
+
+                            contentColor =
+                                Color.White
+                        ),
+
+                    contentPadding =
+                        PaddingValues(
+                            horizontal = 16.dp,
+                            vertical = 0.dp
+                        )
+                ) {
+
+
+                    Text(
+
+                        text =
+                            "Ver mapa",
+
+                        fontSize =
+                            12.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }
 
