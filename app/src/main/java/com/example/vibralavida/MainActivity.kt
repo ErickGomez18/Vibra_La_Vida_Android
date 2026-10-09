@@ -23,6 +23,7 @@ import android.widget.Toast
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 
 
@@ -60,12 +61,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.verticalScroll
 
 
 // ============================================================================
@@ -82,8 +85,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -95,10 +101,12 @@ import androidx.compose.material3.lightColorScheme
 // ============================================================================
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 
 
@@ -120,6 +128,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 
 // ============================================================================
@@ -527,6 +536,72 @@ enum class Screen {
 
 
 // ============================================================================
+// NAVEGACIÓN GLOBAL
+// ============================================================================
+//
+// Estas funciones permiten:
+//
+// - conservar un historial real entre pantallas;
+// - usar correctamente el botón Atrás de Android;
+// - saber qué pantallas forman parte de la sesión principal.
+//
+// ============================================================================
+
+private fun Screen.isAuthenticatedAppScreen(): Boolean {
+
+    return this !in setOf(
+
+        Screen.Splash,
+
+        Screen.Auth,
+
+        Screen.Login,
+
+        Screen.Register,
+
+        Screen.InitialProfile
+    )
+}
+
+
+// ============================================================================
+// SECCIÓN PRINCIPAL DEL DRAWER
+// ============================================================================
+//
+// Si estamos en una subpantalla, resaltamos su módulo principal.
+//
+// ============================================================================
+
+private fun Screen.drawerSection(): Screen {
+
+    return when (this) {
+
+        Screen.SleepMode,
+        Screen.MoodSurveyMenu,
+        Screen.SleepSurvey,
+        Screen.DepressionSurvey,
+        Screen.AnxietySurvey,
+        Screen.StressSurvey,
+        Screen.ImcCalculator,
+        Screen.CaloriesCalculator,
+        Screen.CardioRiskCalculator ->
+            Screen.HealthyHabits
+
+        Screen.Medicamentos,
+        Screen.AgregarMedicamento,
+        Screen.BitacoraSalud,
+        Screen.AgregarBitacora,
+        Screen.Citas,
+        Screen.HistorialAgenda ->
+            Screen.MiAgenda
+
+        else ->
+            this
+    }
+}
+
+
+// ============================================================================
 // PERFIL COMPLETO
 // ============================================================================
 //
@@ -575,6 +650,175 @@ fun AppScreen() {
         mutableStateOf(
             Screen.Splash
         )
+    }
+
+
+    // ========================================================================
+    // DRAWER GLOBAL
+    // ========================================================================
+
+    val appDrawerState =
+        rememberDrawerState(
+            initialValue =
+                DrawerValue.Closed
+        )
+
+
+    val appDrawerScope =
+        rememberCoroutineScope()
+
+
+    // ========================================================================
+    // HISTORIAL DE NAVEGACIÓN
+    // ========================================================================
+    //
+    // No necesitamos cambiar todas las asignaciones currentScreen = ...
+    // que ya existen en el proyecto.
+    //
+    // Observamos los cambios de pantalla y guardamos automáticamente
+    // la pantalla anterior.
+    //
+    // ========================================================================
+
+    val navigationHistory =
+        remember {
+
+            mutableStateListOf<Screen>()
+        }
+
+
+    var lastObservedScreen by remember {
+
+        mutableStateOf(
+            currentScreen
+        )
+    }
+
+
+    var skipNextHistoryPush by remember {
+
+        mutableStateOf(
+            false
+        )
+    }
+
+
+    LaunchedEffect(
+        currentScreen
+    ) {
+
+        if (
+            currentScreen !=
+            lastObservedScreen
+        ) {
+
+            if (
+                skipNextHistoryPush
+            ) {
+
+                skipNextHistoryPush =
+                    false
+
+            } else if (
+                lastObservedScreen
+                    .isAuthenticatedAppScreen() &&
+                currentScreen
+                    .isAuthenticatedAppScreen()
+            ) {
+
+                if (
+                    navigationHistory
+                        .lastOrNull() !=
+                    lastObservedScreen
+                ) {
+
+                    navigationHistory.add(
+                        lastObservedScreen
+                    )
+                }
+
+            } else if (
+                !currentScreen
+                    .isAuthenticatedAppScreen()
+            ) {
+
+                navigationHistory.clear()
+            }
+
+
+            lastObservedScreen =
+                currentScreen
+        }
+    }
+
+
+    // ========================================================================
+    // BOTÓN ATRÁS DE ANDROID
+    // ========================================================================
+    //
+    // 1. Si el menú lateral está abierto, lo cierra.
+    // 2. Si existe historial, regresa una pantalla.
+    // 3. Si estamos en una subpantalla sin historial, regresa a Inicio.
+    // 4. Si estamos en Inicio sin historial, Android conserva su
+    //    comportamiento normal y puede salir/minimizar la app.
+    //
+    // ========================================================================
+
+    BackHandler(
+
+        enabled =
+            appDrawerState.isOpen ||
+            (
+                currentScreen
+                    .isAuthenticatedAppScreen() &&
+                (
+                    navigationHistory
+                        .isNotEmpty() ||
+                    currentScreen !=
+                        Screen.Home
+                )
+            )
+    ) {
+
+        if (
+            appDrawerState.isOpen
+        ) {
+
+            appDrawerScope.launch {
+
+                appDrawerState.close()
+            }
+
+        } else if (
+            navigationHistory
+                .isNotEmpty()
+        ) {
+
+            val previousScreen =
+                navigationHistory.removeAt(
+                    navigationHistory.lastIndex
+                )
+
+
+            skipNextHistoryPush =
+                true
+
+
+            currentScreen =
+                previousScreen
+
+        } else if (
+            currentScreen !=
+                Screen.Home
+        ) {
+
+            skipNextHistoryPush =
+                true
+
+
+            currentScreen =
+                Screen.Home
+        }
     }
 
 
@@ -836,9 +1080,57 @@ fun AppScreen() {
     // NAVEGACIÓN
     // ========================================================================
 
-    when (
-        currentScreen
+    ModalNavigationDrawer(
+
+        drawerState =
+            appDrawerState,
+
+        gesturesEnabled =
+            currentScreen
+                .isAuthenticatedAppScreen() &&
+            currentScreen !=
+                Screen.Home,
+
+        drawerContent = {
+
+            AppGlobalDrawerContent(
+
+                currentScreen =
+                    currentScreen,
+
+                onNavigate = {
+                        destination ->
+
+                    appDrawerScope.launch {
+
+                        appDrawerState.close()
+                    }
+
+
+                    if (
+                        destination !=
+                            currentScreen
+                    ) {
+
+                        currentScreen =
+                            destination
+                    }
+                },
+
+                onClose = {
+
+                    appDrawerScope.launch {
+
+                        appDrawerState.close()
+                    }
+                }
+            )
+        }
     ) {
+
+        when (
+            currentScreen
+        ) {
 
 
         // ====================================================================
@@ -1721,6 +2013,14 @@ fun AppScreen() {
                         Screen.Home
                 },
 
+                onMenuClick = {
+
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
+                },
+
                 onUnauthorized = {
 
                     FirebaseAuth
@@ -1759,6 +2059,14 @@ fun AppScreen() {
 
                     currentScreen =
                         Screen.Home
+                },
+
+                onMenuClick = {
+
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 userAge =
@@ -2278,6 +2586,14 @@ fun AppScreen() {
                         Screen.Home
                 },
 
+                onMenuClick = {
+
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
+                },
+
                 onProfileClick = {
 
                     currentScreen =
@@ -2361,8 +2677,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.HealthyHabits
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2397,8 +2715,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.HealthyHabits
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2443,8 +2763,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.MoodSurveyMenu
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2471,8 +2793,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.MoodSurveyMenu
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2499,8 +2823,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.MoodSurveyMenu
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2527,8 +2853,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.HealthyHabits
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2681,8 +3009,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.HealthyHabits
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2732,8 +3062,10 @@ fun AppScreen() {
 
                 onBackToMenu = {
 
-                    currentScreen =
-                        Screen.HealthyHabits
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 },
 
                 onProfileClick = {
@@ -2757,6 +3089,14 @@ fun AppScreen() {
 
                     currentScreen =
                         Screen.Home
+                },
+
+                onMenuClick = {
+
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 }
             )
         }
@@ -2774,6 +3114,14 @@ fun AppScreen() {
 
                     currentScreen =
                         Screen.Home
+                },
+
+                onMenuClick = {
+
+                    appDrawerScope.launch {
+
+                        appDrawerState.open()
+                    }
                 }
             )
         }
@@ -4756,6 +5104,464 @@ fun AppScreen() {
             )
         }
     }
+    }
+}
+
+
+
+
+// ============================================================================
+// MENÚ LATERAL GLOBAL
+// ============================================================================
+//
+// Este menú se utiliza en las pantallas principales e internas.
+//
+// El Home conserva su propio drawer visual, pero ambos menús apuntan
+// exactamente a las mismas secciones.
+//
+// ============================================================================
+
+@Composable
+private fun AppGlobalDrawerContent(
+
+    currentScreen:
+        Screen,
+
+    onNavigate:
+        (Screen) -> Unit,
+
+    onClose:
+        () -> Unit
+) {
+
+    val section =
+        currentScreen
+            .drawerSection()
+
+
+    Column(
+
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .width(
+                    290.dp
+                )
+                .background(
+                    Color(0xFFFEFFF6)
+                )
+                .verticalScroll(
+                    androidx.compose.foundation.rememberScrollState()
+                )
+                .padding(
+                    18.dp
+                )
+    ) {
+
+        Row(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.SpaceBetween,
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Column {
+
+                Text(
+
+                    text =
+                        "Vibra la vida",
+
+                    fontSize =
+                        22.sp,
+
+                    fontWeight =
+                        FontWeight.Bold,
+
+                    color =
+                        Color(0xFF0F766E)
+                )
+
+
+                Text(
+
+                    text =
+                        "Ir directamente a",
+
+                    fontSize =
+                        12.sp,
+
+                    color =
+                        Color(0xFF64748B)
+                )
+            }
+
+
+            Text(
+
+                text =
+                    "✕",
+
+                modifier =
+                    Modifier
+                        .clickable {
+                            onClose()
+                        }
+                        .padding(
+                            10.dp
+                        ),
+
+                fontSize =
+                    20.sp,
+
+                fontWeight =
+                    FontWeight.Bold,
+
+                color =
+                    Color(0xFF64748B)
+            )
+        }
+
+
+        Spacer(
+
+            modifier =
+                Modifier.height(
+                    18.dp
+                )
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "🏠",
+
+            title =
+                "Inicio",
+
+            selected =
+                section ==
+                    Screen.Home,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.Home
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "💚",
+
+            title =
+                "Hábitos saludables",
+
+            selected =
+                section ==
+                    Screen.HealthyHabits,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.HealthyHabits
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "🫀",
+
+            title =
+                "Trastornos del ritmo",
+
+            selected =
+                section ==
+                    Screen.HealthConnect,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.HealthConnect
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "🩸",
+
+            title =
+                "Diabetes mellitus",
+
+            selected =
+                section ==
+                    Screen.DiabetesMellitus,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.DiabetesMellitus
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "📅",
+
+            title =
+                "Mi agenda",
+
+            selected =
+                section ==
+                    Screen.MiAgenda,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.MiAgenda
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "🩺",
+
+            title =
+                "Mi equipo de salud",
+
+            selected =
+                section ==
+                    Screen.MiEquipoSalud,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.MiEquipoSalud
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "📍",
+
+            title =
+                "Profesionales cercanos",
+
+            selected =
+                section ==
+                    Screen.MapaProfesionales,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.MapaProfesionales
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "🤖",
+
+            title =
+                "Hablar con Nuby",
+
+            selected =
+                section ==
+                    Screen.NubyChat,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.NubyChat
+                )
+            }
+        )
+
+
+        AppDrawerDestination(
+
+            emoji =
+                "👤",
+
+            title =
+                "Mi perfil",
+
+            selected =
+                section ==
+                    Screen.Profile,
+
+            onClick = {
+
+                onNavigate(
+                    Screen.Profile
+                )
+            }
+        )
+
+
+        Spacer(
+
+            modifier =
+                Modifier.height(
+                    20.dp
+                )
+        )
+
+
+        Text(
+
+            text =
+                "Tip: el botón Atrás del teléfono ahora regresa a la pantalla anterior.",
+
+            fontSize =
+                11.sp,
+
+            lineHeight =
+                16.sp,
+
+            color =
+                Color(0xFF64748B)
+        )
+    }
+}
+
+
+// ============================================================================
+// OPCIÓN DEL MENÚ GLOBAL
+// ============================================================================
+
+@Composable
+private fun AppDrawerDestination(
+
+    emoji:
+        String,
+
+    title:
+        String,
+
+    selected:
+        Boolean,
+
+    onClick:
+        () -> Unit
+) {
+
+    Row(
+
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(
+                    RoundedCornerShape(
+                        16.dp
+                    )
+                )
+                .background(
+
+                    if (
+                        selected
+                    ) {
+                        Color(0xFFDDF7EE)
+                    } else {
+                        Color.Transparent
+                    }
+                )
+                .clickable {
+                    onClick()
+                }
+                .padding(
+                    horizontal =
+                        13.dp,
+                    vertical =
+                        12.dp
+                ),
+
+        verticalAlignment =
+            Alignment.CenterVertically
+    ) {
+
+        Text(
+
+            text =
+                emoji,
+
+            fontSize =
+                20.sp
+        )
+
+
+        Spacer(
+
+            modifier =
+                Modifier.width(
+                    11.dp
+                )
+        )
+
+
+        Text(
+
+            text =
+                title,
+
+            fontSize =
+                14.sp,
+
+            fontWeight =
+                if (
+                    selected
+                ) {
+                    FontWeight.Bold
+                } else {
+                    FontWeight.Medium
+                },
+
+            color =
+                if (
+                    selected
+                ) {
+                    Color(0xFF0F766E)
+                } else {
+                    Color(0xFF334155)
+                }
+        )
+    }
+
+
+    Spacer(
+
+        modifier =
+            Modifier.height(
+                4.dp
+            )
+    )
 }
 
 

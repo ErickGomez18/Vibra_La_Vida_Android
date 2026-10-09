@@ -175,6 +175,94 @@ fun HomeScreen(
 
                         drawerState.close()
                     }
+                },
+
+                onHomeClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+                },
+
+                onHealthyLifeClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onHealthyLifeClick()
+                },
+
+                onRhythmClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onRhythmClick()
+                },
+
+                onDiabetesClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onDiabetesClick()
+                },
+
+                onAgendaClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onAgendaClick()
+                },
+
+                onHealthTeamClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onHealthTeamClick()
+                },
+
+                onProfessionalsMapClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onProfessionalsMapClick()
+                },
+
+                onNubyClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onNubyClick()
+                },
+
+                onProfileClick = {
+
+                    scope.launch {
+
+                        drawerState.close()
+                    }
+
+                    onProfileClick()
                 }
             )
         }
@@ -1722,7 +1810,36 @@ fun HomeCategoryCard(
 
 @Composable
 fun HomeDrawerContent(
-    onClose: () -> Unit
+
+    onClose:
+        () -> Unit,
+
+    onHomeClick:
+        () -> Unit,
+
+    onHealthyLifeClick:
+        () -> Unit,
+
+    onRhythmClick:
+        () -> Unit,
+
+    onDiabetesClick:
+        () -> Unit,
+
+    onAgendaClick:
+        () -> Unit,
+
+    onHealthTeamClick:
+        () -> Unit,
+
+    onProfessionalsMapClick:
+        () -> Unit,
+
+    onNubyClick:
+        () -> Unit,
+
+    onProfileClick:
+        () -> Unit
 ) {
 
     Column(
@@ -1826,106 +1943,75 @@ fun HomeDrawerContent(
         )
 
 
-        NavigationDrawerItem(
-
-            label = {
-
-                Text(
-                    text =
-                        "Inicio"
-                )
-            },
-
-            selected =
-                true,
-
-            onClick =
-                onClose,
-
-            icon = {
-
-                Icon(
-
-                    imageVector =
-                        Icons.Default.Spa,
-
-                    contentDescription =
-                        null
-                )
-            },
-
-            colors =
-                NavigationDrawerItemDefaults.colors(
-
-                    selectedContainerColor =
-                        Color(0xFFD9F99D),
-
-                    selectedIconColor =
-                        Color(0xFF0F766E),
-
-                    selectedTextColor =
-                        Color(0xFF0F766E)
-                )
+        HomeDrawerItem(
+            emoji = "🏠",
+            title = "Inicio",
+            selected = true,
+            onClick = onHomeClick
         )
 
 
-        NavigationDrawerItem(
-
-            label = {
-
-                Text(
-                    text =
-                        "Recordatorios"
-                )
-            },
-
-            selected =
-                false,
-
-            onClick =
-                onClose,
-
-            icon = {
-
-                Icon(
-
-                    imageVector =
-                        Icons.Default.Favorite,
-
-                    contentDescription =
-                        null
-                )
-            }
+        HomeDrawerItem(
+            emoji = "💚",
+            title = "Hábitos saludables",
+            selected = false,
+            onClick = onHealthyLifeClick
         )
 
 
-        NavigationDrawerItem(
+        HomeDrawerItem(
+            emoji = "🫀",
+            title = "Trastornos del ritmo",
+            selected = false,
+            onClick = onRhythmClick
+        )
 
-            label = {
 
-                Text(
-                    text =
-                        "Configuración"
-                )
-            },
+        HomeDrawerItem(
+            emoji = "🩸",
+            title = "Diabetes mellitus",
+            selected = false,
+            onClick = onDiabetesClick
+        )
 
-            selected =
-                false,
 
-            onClick =
-                onClose,
+        HomeDrawerItem(
+            emoji = "📅",
+            title = "Mi agenda",
+            selected = false,
+            onClick = onAgendaClick
+        )
 
-            icon = {
 
-                Icon(
+        HomeDrawerItem(
+            emoji = "🩺",
+            title = "Mi equipo de salud",
+            selected = false,
+            onClick = onHealthTeamClick
+        )
 
-                    imageVector =
-                        Icons.Default.AccountCircle,
 
-                    contentDescription =
-                        null
-                )
-            }
+        HomeDrawerItem(
+            emoji = "📍",
+            title = "Profesionales cercanos",
+            selected = false,
+            onClick = onProfessionalsMapClick
+        )
+
+
+        HomeDrawerItem(
+            emoji = "🤖",
+            title = "Hablar con Nuby",
+            selected = false,
+            onClick = onNubyClick
+        )
+
+
+        HomeDrawerItem(
+            emoji = "👤",
+            title = "Mi perfil",
+            selected = false,
+            onClick = onProfileClick
         )
 
 
@@ -1941,16 +2027,65 @@ fun HomeDrawerContent(
         Text(
 
             text =
-                "Este menú queda como base para futuras opciones.",
+                "Puedes cambiar de sección sin regresar primero al inicio.",
 
             color =
-                Color(0xFF94A3B8),
+                Color(0xFF64748B),
 
             fontSize =
-                12.sp,
+                11.sp,
 
             lineHeight =
                 16.sp
         )
     }
+}
+
+
+// ============================================================================
+// ITEM DEL DRAWER DE INICIO
+// ============================================================================
+
+@Composable
+private fun HomeDrawerItem(
+
+    emoji:
+        String,
+
+    title:
+        String,
+
+    selected:
+        Boolean,
+
+    onClick:
+        () -> Unit
+) {
+
+    NavigationDrawerItem(
+
+        label = {
+
+            Text(
+                text =
+                    "$emoji  $title"
+            )
+        },
+
+        selected =
+            selected,
+
+        onClick =
+            onClick,
+
+        colors =
+            NavigationDrawerItemDefaults.colors(
+
+                selectedContainerColor =
+                    Color(0xFFD9F99D),
+
+                selectedTextColor =
+                    Color(0xFF0F766E)
+            )
+    )
 }

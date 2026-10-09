@@ -65,6 +65,8 @@ fun MiEquipoSaludScreen(
 
     onBack: () -> Unit,
 
+    onMenuClick: () -> Unit,
+
     onUnauthorized: () -> Unit
 
 ) {
@@ -196,12 +198,15 @@ fun MiEquipoSaludScreen(
 
         TextButton(
             onClick =
-                onBack
+                onMenuClick
         ) {
 
             Text(
                 text =
-                    "← Volver"
+                    "☰ Menú",
+
+                fontWeight =
+                    FontWeight.Bold
             )
         }
 

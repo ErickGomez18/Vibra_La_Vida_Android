@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
@@ -92,6 +93,8 @@ import kotlinx.coroutines.launch
 fun NubyChatScreen(
 
     onBack: () -> Unit,
+
+    onMenuClick: () -> Unit,
 
     userAge: String,
 
@@ -588,17 +591,17 @@ fun NubyChatScreen(
 
                 IconButton(
                     onClick =
-                        onBack
+                        onMenuClick
                 ) {
 
 
                     Icon(
 
                         imageVector =
-                            Icons.Default.ArrowBack,
+                            Icons.Default.Menu,
 
                         contentDescription =
-                            "Volver",
+                            "Abrir menú",
 
                         tint =
                             Color(0xFF0F766E)

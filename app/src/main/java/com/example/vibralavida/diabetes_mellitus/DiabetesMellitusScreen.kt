@@ -598,7 +598,7 @@ private val temasDiabetes =
                 "La diabetes no significa simplemente «tener demasiada azúcar». El problema está relacionado con cómo el cuerpo maneja la glucosa y la insulina.",
 
             nubyRes =
-                R.drawable.nuby_saludo
+                R.drawable.nuby_idea
         ),
 
 
@@ -625,7 +625,7 @@ private val temasDiabetes =
                 "Tipo 1 y tipo 2 son diferentes. Ninguna de las dos se explica simplemente por «comer dulces».",
 
             nubyRes =
-                R.drawable.nuby_tranquilo
+                R.drawable.nuby_esteto
         ),
 
 
@@ -652,7 +652,7 @@ private val temasDiabetes =
                 "Prediabetes no significa que inevitablemente desarrollarás diabetes tipo 2.",
 
             nubyRes =
-                R.drawable.nuby_tranquilo
+                R.drawable.nuby_pensando
         ),
 
 
@@ -678,7 +678,7 @@ private val temasDiabetes =
                 "No es correcto decir que la diabetes es únicamente hereditaria ni únicamente adquirida.",
 
             nubyRes =
-                R.drawable.nuby_saludo
+                R.drawable.nuby_pensando
         ),
 
 
@@ -705,7 +705,7 @@ private val temasDiabetes =
                 "Los hábitos saludables funcionan mejor cuando son sostenibles, no cuando son extremos.",
 
             nubyRes =
-                R.drawable.nuby_feliz
+                R.drawable.nuby_bowl
         ),
 
 
@@ -732,7 +732,7 @@ private val temasDiabetes =
                 "Los síntomas orientan, pero no sustituyen las pruebas ni la valoración profesional.",
 
             nubyRes =
-                R.drawable.nuby_tranquilo
+                R.drawable.nuby_esteto
         ),
 
 
@@ -758,7 +758,7 @@ private val temasDiabetes =
                 "Tener diabetes no significa que hayas fracasado ni que no puedas llevar una vida activa.",
 
             nubyRes =
-                R.drawable.nuby_saludo
+                R.drawable.nuby_esteto
         ),
 
 
@@ -784,7 +784,7 @@ private val temasDiabetes =
                 "Buen control no significa perfección; significa seguimiento y decisiones seguras junto con tu equipo de salud.",
 
             nubyRes =
-                R.drawable.nuby_feliz
+                R.drawable.nuby_esteto
         ),
 
 
@@ -811,7 +811,7 @@ private val temasDiabetes =
                 "Un mito repetido muchas veces sigue siendo un mito.",
 
             nubyRes =
-                R.drawable.nuby_feliz
+                R.drawable.nuby_idea
         ),
 
 
@@ -837,7 +837,7 @@ private val temasDiabetes =
                 "Ante síntomas graves o deterioro rápido, la prioridad es buscar atención médica.",
 
             nubyRes =
-                R.drawable.nuby_tranquilo
+                R.drawable.nuby_esteto
         )
     )
 
@@ -1587,6 +1587,9 @@ private fun crearPreguntasSesion(
 fun DiabetesMellitusScreen(
 
     onBack:
+        () -> Unit,
+
+    onMenuClick:
         () -> Unit
 
 ) {
@@ -1893,6 +1896,9 @@ fun DiabetesMellitusScreen(
 
                 onBack =
                     onBack,
+
+                onMenuClick =
+                    onMenuClick,
 
                 onTemaClick = {
                         seleccionado ->
@@ -2225,6 +2231,9 @@ private fun DiabetesInicio(
     onBack:
         () -> Unit,
 
+    onMenuClick:
+        () -> Unit,
+
     onTemaClick:
         (TemaDiabetes) -> Unit,
 
@@ -2263,15 +2272,18 @@ private fun DiabetesInicio(
 
         TextButton(
             onClick =
-                onBack
+                onMenuClick
         ) {
 
             Text(
                 text =
-                    "← Volver",
+                    "☰ Menú",
 
                 color =
-                    VerdePrincipal
+                    VerdePrincipal,
+
+                fontWeight =
+                    FontWeight.Bold
             )
         }
 
@@ -2326,7 +2338,7 @@ private fun DiabetesInicio(
                         painter =
                             painterResource(
                                 id =
-                                    R.drawable.nuby_saludo
+                                    R.drawable.nuby_saludando
                             ),
 
                         contentDescription =
@@ -4753,7 +4765,7 @@ private fun DiabetesQuiz(
                 painter =
                     painterResource(
                         id =
-                            R.drawable.nuby_tranquilo
+                            R.drawable.nuby_pensando
                     ),
 
                 contentDescription =
@@ -5105,9 +5117,9 @@ private fun DiabetesQuiz(
                                     if (
                                         correcta
                                     ) {
-                                        R.drawable.nuby_feliz
+                                        R.drawable.nuby_abrazo
                                     } else {
-                                        R.drawable.nuby_tranquilo
+                                        R.drawable.nuby_pensando
                                     }
                             ),
 
@@ -5402,7 +5414,7 @@ private fun DiabetesResultado(
             painter =
                 painterResource(
                     id =
-                        R.drawable.nuby_feliz
+                        R.drawable.nuby_abrazo
                 ),
 
             contentDescription =
