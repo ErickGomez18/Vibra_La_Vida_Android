@@ -103,6 +103,23 @@ data class Cita(
 
 
     // ========================================================================
+    // NUEVO FLUJO UNIFICADO WEB / ANDROID
+    // ========================================================================
+    //
+    // Estos campos llegan desde los endpoints actuales de Express.
+    //
+    // ========================================================================
+
+    val motivoReagenda: String = "",
+
+    val motivoCancelacion: String = "",
+
+    val fechaSolicitadaPaciente: String = "",
+
+    val horaSolicitadaPaciente: String = "",
+
+
+    // ========================================================================
     // RECORDATORIO
     // ========================================================================
 

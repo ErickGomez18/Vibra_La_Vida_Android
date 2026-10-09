@@ -153,7 +153,6 @@ import com.example.vibralavida.api.modelos.MedicamentoRequest
 import com.example.vibralavida.api.modelos.RegistroSaludRequest
 import com.example.vibralavida.api.modelos.EstudioLaboratorioRequest
 import com.example.vibralavida.api.modelos.AdherenciaMedicamentoRequest
-import com.example.vibralavida.api.modelos.RespuestaPacienteCitaRequest
 import com.example.vibralavida.api.modelos.ResultadoRequest
 import com.example.vibralavida.api.modelos.UsuarioPerfil
 
@@ -169,6 +168,7 @@ import com.example.vibralavida.pantallas_principales.HomeScreen
 import com.example.vibralavida.pantallas_principales.ProfileScreen
 import com.example.vibralavida.mapa_profesionales.MapaProfesionalesScreen
 import com.example.vibralavida.seguimiento.MiEquipoSaludScreen
+import com.example.vibralavida.diabetes_mellitus.DiabetesMellitusScreen
 import com.example.vibralavida.agenda.MiAgendaScreen
 import com.example.vibralavida.agenda.historial.HistorialAgendaScreen
 
@@ -479,6 +479,12 @@ enum class Screen {
     CardioRiskCalculator,
 
     HealthConnect,
+
+    // ========================================================================
+    // DIABETES MELLITUS
+    // ========================================================================
+
+    DiabetesMellitus,
 
 
     // ========================================================================
@@ -1636,9 +1642,8 @@ fun AppScreen() {
 
                 onDiabetesClick = {
 
-                    println(
-                        "Ir a Diabetes Mellitus"
-                    )
+                    currentScreen =
+                        Screen.DiabetesMellitus
                 },
 
                 onAgendaClick = {
@@ -2741,6 +2746,23 @@ fun AppScreen() {
 
 
         // ====================================================================
+        // DIABETES MELLITUS
+        // ====================================================================
+
+        Screen.DiabetesMellitus -> {
+
+            DiabetesMellitusScreen(
+
+                onBack = {
+
+                    currentScreen =
+                        Screen.Home
+                }
+            )
+        }
+
+
+        // ====================================================================
         // HEALTH CONNECT
         // ====================================================================
 
@@ -3305,34 +3327,23 @@ fun AppScreen() {
                 // ============================================================
 
                 onConfirmarAsistencia = {
-                        cita ->
-
-
-                    val request =
-                        RespuestaPacienteCitaRequest(
-
-                            accion =
-                                "confirmar"
-                        )
+                        cita,
+                        contrasena ->
 
 
                     CitasPacienteRepository
-                        .actualizarRespuesta(
+                        .confirmarCita(
 
                             citaId =
                                 cita.id,
 
-                            request =
-                                request,
+                            contrasena =
+                                contrasena,
 
                             onSuccess = {
                                     citaActualizada,
                                     mensaje ->
 
-
-                                // --------------------------------------------
-                                // ACTUALIZAR LISTA LOCAL
-                                // --------------------------------------------
 
                                 val indice =
                                     citas.indexOfFirst {
@@ -3352,10 +3363,6 @@ fun AppScreen() {
                                 }
 
 
-                                // --------------------------------------------
-                                // AVISAR AL PACIENTE
-                                // --------------------------------------------
-
                                 Toast
                                     .makeText(
 
@@ -3369,7 +3376,6 @@ fun AppScreen() {
                             },
 
                             onUnauthorized = {
-
 
                                 FirebaseAuth
                                     .getInstance()
@@ -3395,13 +3401,12 @@ fun AppScreen() {
                             onError = {
                                     mensaje ->
 
-
                                 Toast
                                     .makeText(
 
                                         context,
 
-                                        "No fue posible confirmar tu asistencia: $mensaje",
+                                        mensaje,
 
                                         Toast.LENGTH_LONG
                                     )
@@ -3429,11 +3434,11 @@ fun AppScreen() {
                         motivo ->
 
 
-                    val request =
-                        RespuestaPacienteCitaRequest(
+                    CitasPacienteRepository
+                        .solicitarReagenda(
 
-                            accion =
-                                "reagendar",
+                            citaId =
+                                cita.id,
 
                             motivo =
                                 motivo,
@@ -3442,27 +3447,12 @@ fun AppScreen() {
                                 fecha,
 
                             horaSolicitada =
-                                hora
-                        )
-
-
-                    CitasPacienteRepository
-                        .actualizarRespuesta(
-
-                            citaId =
-                                cita.id,
-
-                            request =
-                                request,
+                                hora,
 
                             onSuccess = {
                                     citaActualizada,
                                     mensaje ->
 
-
-                                // --------------------------------------------
-                                // ACTUALIZAR LISTA LOCAL
-                                // --------------------------------------------
 
                                 val indice =
                                     citas.indexOfFirst {
@@ -3496,22 +3486,9 @@ fun AppScreen() {
 
                             onUnauthorized = {
 
-
                                 FirebaseAuth
                                     .getInstance()
                                     .signOut()
-
-
-                                Toast
-                                    .makeText(
-
-                                        context,
-
-                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
-
-                                        Toast.LENGTH_LONG
-                                    )
-                                    .show()
 
 
                                 currentScreen =
@@ -3521,13 +3498,12 @@ fun AppScreen() {
                             onError = {
                                     mensaje ->
 
-
                                 Toast
                                     .makeText(
 
                                         context,
 
-                                        "No fue posible enviar la solicitud de reagendación: $mensaje",
+                                        mensaje,
 
                                         Toast.LENGTH_LONG
                                     )
@@ -3552,50 +3528,26 @@ fun AppScreen() {
                         motivo ->
 
 
-                    val request =
-                        RespuestaPacienteCitaRequest(
-
-                            accion =
-                                "cancelar",
-
-                            motivo =
-                                motivo
-                        )
-
-
                     CitasPacienteRepository
-                        .actualizarRespuesta(
+                        .cancelarCita(
 
                             citaId =
                                 cita.id,
 
-                            request =
-                                request,
+                            motivo =
+                                motivo,
 
                             onSuccess = {
                                     citaActualizada,
                                     mensaje ->
 
 
-                                // --------------------------------------------
-                                // ACTUALIZAR LISTA LOCAL
-                                // --------------------------------------------
+                                // Quitamos la cita cancelada de la agenda activa.
+                                citas.removeAll {
+                                        actual ->
 
-                                val indice =
-                                    citas.indexOfFirst {
-                                            actual ->
-
-                                        actual.id ==
-                                                citaActualizada.id
-                                    }
-
-
-                                if (
-                                    indice != -1
-                                ) {
-
-                                    citas[indice] =
-                                        citaActualizada
+                                    actual.id ==
+                                        citaActualizada.id
                                 }
 
 
@@ -3613,22 +3565,9 @@ fun AppScreen() {
 
                             onUnauthorized = {
 
-
                                 FirebaseAuth
                                     .getInstance()
                                     .signOut()
-
-
-                                Toast
-                                    .makeText(
-
-                                        context,
-
-                                        "Tu sesión no es válida. Inicia sesión nuevamente.",
-
-                                        Toast.LENGTH_LONG
-                                    )
-                                    .show()
 
 
                                 currentScreen =
@@ -3638,13 +3577,12 @@ fun AppScreen() {
                             onError = {
                                     mensaje ->
 
-
                                 Toast
                                     .makeText(
 
                                         context,
 
-                                        "No fue posible enviar la solicitud de cancelación: $mensaje",
+                                        mensaje,
 
                                         Toast.LENGTH_LONG
                                     )
@@ -3652,9 +3590,10 @@ fun AppScreen() {
                             }
                         )
                 }
+
+
             )
         }
-
 
 
         // ====================================================================
@@ -3668,9 +3607,6 @@ fun AppScreen() {
                 medicamentos =
                     medicamentos,
 
-                registrosAdherencia =
-                    registrosAdherencia,
-
                 onBack = {
 
                     currentScreen =
@@ -3682,7 +3618,6 @@ fun AppScreen() {
                     medicamentoEnEdicion =
                         null
 
-
                     currentScreen =
                         Screen.AgregarMedicamento
                 },
@@ -3690,10 +3625,8 @@ fun AppScreen() {
                 onEditarMedicamento = {
                         medicamento ->
 
-
                     medicamentoEnEdicion =
                         medicamento
-
 
                     currentScreen =
                         Screen.AgregarMedicamento
@@ -3702,16 +3635,6 @@ fun AppScreen() {
                 onEliminarMedicamento = {
                         medicamento ->
 
-
-                    // ========================================================
-                    // ELIMINAR PRIMERO EN LA API
-                    // ========================================================
-                    //
-                    // Solo quitamos el medicamento de la pantalla y cancelamos
-                    // sus alarmas si Firestore confirmó la eliminación.
-                    //
-                    // ========================================================
-
                     MedicamentosRepository
                         .eliminarMedicamento(
 
@@ -3719,7 +3642,6 @@ fun AppScreen() {
                                 medicamento.id,
 
                             onSuccess = {
-
 
                                 ProgramadorRecordatoriosMedicamento
                                     .cancelarMedicamento(
@@ -3736,7 +3658,7 @@ fun AppScreen() {
                                         actual ->
 
                                     actual.id ==
-                                            medicamento.id
+                                        medicamento.id
                                 }
 
 
@@ -3755,212 +3677,12 @@ fun AppScreen() {
                             onError = {
                                     mensaje ->
 
-
                                 Toast
                                     .makeText(
 
                                         context,
 
                                         "No fue posible eliminar el medicamento: $mensaje",
-
-                                        Toast.LENGTH_LONG
-                                    )
-                                    .show()
-                            }
-                        )
-                },
-
-
-                // ============================================================
-                // REGISTRAR ADHERENCIA
-                // ============================================================
-                //
-                // El paciente reporta una dosis como:
-                //
-                // - tomado
-                // - omitido
-                //
-                // Este registro es un AUTORREPORTE. No confirma clínicamente
-                // que el medicamento haya sido ingerido.
-                //
-                // ============================================================
-
-                onRegistrarAdherencia = {
-                        medicamento,
-                        horario,
-                        estado ->
-
-
-                    // ========================================================
-                    // FECHA ACTUAL
-                    // ========================================================
-
-                    val fechaActual =
-                        LocalDate.now()
-
-
-                    val formatoFecha =
-                        DateTimeFormatter.ofPattern(
-                            "dd/MM/yyyy"
-                        )
-
-
-                    val formatoHora =
-                        DateTimeFormatter.ofPattern(
-                            "HH:mm"
-                        )
-
-
-                    val fechaTexto =
-                        fechaActual.format(
-                            formatoFecha
-                        )
-
-
-                    // ========================================================
-                    // CONVERTIR FECHA + HORARIO A MILISEGUNDOS
-                    // ========================================================
-
-                    val fechaHoraProgramadaMs =
-                        try {
-
-                            val horaLocal =
-                                LocalTime.parse(
-                                    horario,
-                                    formatoHora
-                                )
-
-
-                            LocalDateTime
-                                .of(
-                                    fechaActual,
-                                    horaLocal
-                                )
-                                .atZone(
-                                    ZoneId.systemDefault()
-                                )
-                                .toInstant()
-                                .toEpochMilli()
-
-                        } catch (
-                            e: Exception
-                        ) {
-
-                            0L
-                        }
-
-
-                    // ========================================================
-                    // REQUEST
-                    // ========================================================
-
-                    val request =
-                        AdherenciaMedicamentoRequest(
-
-                            medicamentoId =
-                                medicamento.id,
-
-                            nombreMedicamento =
-                                medicamento.nombre,
-
-                            dosis =
-                                medicamento.dosis,
-
-                            fecha =
-                                fechaTexto,
-
-                            horarioProgramado =
-                                horario,
-
-                            fechaHoraProgramadaMs =
-                                fechaHoraProgramadaMs,
-
-                            estado =
-                                estado
-                        )
-
-
-                    // ========================================================
-                    // GUARDAR EN LA API
-                    // ========================================================
-
-                    AdherenciaMedicamentosRepository
-                        .registrarEstado(
-
-                            request =
-                                request,
-
-                            onSuccess = {
-                                    registroGuardado ->
-
-
-                                // --------------------------------------------
-                                // BUSCAR SI YA EXISTÍA ESTE REGISTRO
-                                // --------------------------------------------
-                                //
-                                // Como backend usa un ID determinístico,
-                                // cambiar de "tomado" a "omitido" actualiza
-                                // la misma dosis y no crea duplicados.
-                                //
-                                // --------------------------------------------
-
-                                val indice =
-                                    registrosAdherencia
-                                        .indexOfFirst {
-                                                actual ->
-
-                                            actual.id ==
-                                                    registroGuardado.id
-                                        }
-
-
-                                if (
-                                    indice >= 0
-                                ) {
-
-                                    registrosAdherencia[indice] =
-                                        registroGuardado
-
-                                } else {
-
-                                    registrosAdherencia.add(
-                                        registroGuardado
-                                    )
-                                }
-
-
-                                Toast
-                                    .makeText(
-
-                                        context,
-
-                                        if (
-                                            estado ==
-                                            "tomado"
-                                        ) {
-
-                                            "Medicamento reportado como tomado"
-
-                                        } else {
-
-                                            "Medicamento reportado como omitido"
-                                        },
-
-                                        Toast.LENGTH_SHORT
-                                    )
-                                    .show()
-                            },
-
-                            onError = {
-                                    mensaje ->
-
-
-                                Toast
-                                    .makeText(
-
-                                        context,
-
-                                        "No fue posible registrar el medicamento: $mensaje",
 
                                         Toast.LENGTH_LONG
                                     )

@@ -1,26 +1,59 @@
 package com.example.vibralavida.api
 
-import com.example.vibralavida.api.modelos.RespuestaPacienteCitaRequest
 import com.example.vibralavida.api.modelos.RespuestaPacienteCitaResponse
 
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.Header
-import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 
 
 // ============================================================================
 // RESPUESTA DEL PACIENTE A CITAS API
 // ============================================================================
+//
+// Android usa exactamente los mismos endpoints que la web.
+//
+// Ya NO usamos:
+// PATCH /api/citas/:id/respuesta-paciente
+//
+// Ahora usamos:
+// POST /api/citas/:id/confirmar
+// POST /api/citas/:id/solicitar-reagenda
+// POST /api/citas/:id/cancelar
+//
+// ============================================================================
 
 interface CitasPacienteApi {
 
 
-    @PATCH(
-        "api/citas/{id}/respuesta-paciente"
+    // ========================================================================
+    // CONFIRMAR CITA
+    // ========================================================================
+
+    @POST(
+        "api/citas/{id}/confirmar"
     )
-    fun actualizarRespuestaPaciente(
+    fun confirmarCita(
+
+        @Header("Authorization")
+        authorization: String,
+
+        @Path("id")
+        citaId: String
+
+    ): Call<RespuestaPacienteCitaResponse>
+
+
+    // ========================================================================
+    // SOLICITAR REAGENDA
+    // ========================================================================
+
+    @POST(
+        "api/citas/{id}/solicitar-reagenda"
+    )
+    fun solicitarReagenda(
 
         @Header("Authorization")
         authorization: String,
@@ -29,7 +62,28 @@ interface CitasPacienteApi {
         citaId: String,
 
         @Body
-        request: RespuestaPacienteCitaRequest
+        body: Map<String, String>
+
+    ): Call<RespuestaPacienteCitaResponse>
+
+
+    // ========================================================================
+    // CANCELAR CITA
+    // ========================================================================
+
+    @POST(
+        "api/citas/{id}/cancelar"
+    )
+    fun cancelarCita(
+
+        @Header("Authorization")
+        authorization: String,
+
+        @Path("id")
+        citaId: String,
+
+        @Body
+        body: Map<String, String>
 
     ): Call<RespuestaPacienteCitaResponse>
 }

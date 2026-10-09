@@ -76,10 +76,8 @@ import java.time.format.DateTimeFormatter
 //
 // IMPORTANTE:
 //
-// Una solicitud de reagendación o cancelación NO modifica directamente
-// la cita.
-//
-// El profesional debe revisar la solicitud desde el panel web.
+// La reagendación queda como solicitud para que el profesional la revise.
+// La cancelación sí cambia el estado de la cita a cancelada.
 //
 // ============================================================================
 
@@ -92,7 +90,13 @@ fun CitasScreen(
     onBack: () -> Unit,
 
     onConfirmarAsistencia:
-        (Cita) -> Unit = {},
+        (
+        Cita,
+        String
+    ) -> Unit = {
+            _,
+            _ ->
+    },
 
     onSolicitarReagendacion:
         (
@@ -152,7 +156,14 @@ fun CitasScreen(
     // ========================================================================
 
     val citasOrdenadas =
-        citas.sortedBy {
+        citas
+            .filter {
+                !it.estado.equals(
+                    "cancelada",
+                    ignoreCase = true
+                )
+            }
+            .sortedBy {
 
             obtenerFechaHoraMillis(
 
@@ -485,7 +496,10 @@ private fun TarjetaCita(
     Cita,
 
     onConfirmarAsistencia:
-        (Cita) -> Unit,
+        (
+        Cita,
+        String
+    ) -> Unit,
 
     onSolicitarReagendacion:
         (
@@ -516,6 +530,14 @@ private fun TarjetaCita(
     // ========================================================================
     // DIÁLOGOS
     // ========================================================================
+
+    var mostrarDialogoConfirmar by remember {
+
+        mutableStateOf(
+            false
+        )
+    }
+
 
     var mostrarDialogoReagendar by remember {
 
@@ -551,6 +573,9 @@ private fun TarjetaCita(
             "cancelada" ->
                 "Cancelada"
 
+            "reagenda_solicitada" ->
+                "Reagenda solicitada"
+
             else ->
                 "Pendiente"
         }
@@ -581,35 +606,35 @@ private fun TarjetaCita(
 
     val estadoPacienteTexto =
         when (
-            cita.estadoPaciente.lowercase()
+            cita.estado.lowercase()
         ) {
 
             "confirmada" ->
                 "Asistencia confirmada"
 
-            "solicitud_reagendar" ->
+            "reagenda_solicitada" ->
                 "Solicitud de reagendación enviada"
 
-            "solicitud_cancelar" ->
-                "Solicitud de cancelación enviada"
+            "cancelada" ->
+                "Cita cancelada"
 
             else ->
-                "Sin respuesta del paciente"
+                "Pendiente de confirmar"
         }
 
 
     val estadoPacienteColor =
         when (
-            cita.estadoPaciente.lowercase()
+            cita.estado.lowercase()
         ) {
 
             "confirmada" ->
                 Color(0xFF15803D)
 
-            "solicitud_reagendar" ->
+            "reagenda_solicitada" ->
                 Color(0xFFB45309)
 
-            "solicitud_cancelar" ->
+            "cancelada" ->
                 Color(0xFFB91C1C)
 
             else ->
@@ -940,8 +965,12 @@ private fun TarjetaCita(
                 // -------------------------------------------------------------
 
                 if (
-                    !cita.estadoPaciente.equals(
+                    !cita.estado.equals(
                         "confirmada",
+                        ignoreCase = true
+                    ) &&
+                    !cita.estado.equals(
+                        "reagenda_solicitada",
                         ignoreCase = true
                     )
                 ) {
@@ -950,9 +979,8 @@ private fun TarjetaCita(
 
                         onClick = {
 
-                            onConfirmarAsistencia(
-                                cita
-                            )
+                            mostrarDialogoConfirmar =
+                                true
                         },
 
                         modifier =
@@ -984,8 +1012,8 @@ private fun TarjetaCita(
                 // -------------------------------------------------------------
 
                 if (
-                    !cita.estadoPaciente.equals(
-                        "solicitud_reagendar",
+                    !cita.estado.equals(
+                        "reagenda_solicitada",
                         ignoreCase = true
                     )
                 ) {
@@ -1020,8 +1048,8 @@ private fun TarjetaCita(
                 // -------------------------------------------------------------
 
                 if (
-                    !cita.estadoPaciente.equals(
-                        "solicitud_cancelar",
+                    !cita.estado.equals(
+                        "cancelada",
                         ignoreCase = true
                     )
                 ) {
@@ -1050,6 +1078,37 @@ private fun TarjetaCita(
                 }
             }
         }
+    }
+
+
+    // ========================================================================
+    // DIÁLOGO CONFIRMAR CITA
+    // ========================================================================
+
+    if (
+        mostrarDialogoConfirmar
+    ) {
+
+        DialogoConfirmarCita(
+
+            onDismiss = {
+
+                mostrarDialogoConfirmar =
+                    false
+            },
+
+            onConfirmar = {
+                    contrasena ->
+
+                mostrarDialogoConfirmar =
+                    false
+
+                onConfirmarAsistencia(
+                    cita,
+                    contrasena
+                )
+            }
+        )
     }
 
 
@@ -1130,6 +1189,133 @@ private fun TarjetaCita(
             }
         )
     }
+}
+
+
+// ============================================================================
+// DIÁLOGO PARA REAGENDAR
+// ============================================================================
+
+@Composable
+private fun DialogoConfirmarCita(
+
+    onDismiss:
+        () -> Unit,
+
+    onConfirmar:
+        (String) -> Unit
+
+) {
+
+    var contrasena by remember {
+
+        mutableStateOf(
+            ""
+        )
+    }
+
+
+    AlertDialog(
+
+        onDismissRequest =
+            onDismiss,
+
+        title = {
+
+            Text(
+                text =
+                    "Confirmar cita"
+            )
+        },
+
+        text = {
+
+            Column(
+
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        10.dp
+                    )
+            ) {
+
+                Text(
+
+                    text =
+                        "Por seguridad, escribe la contraseña de tu cuenta para confirmar tu asistencia.",
+
+                    fontSize =
+                        13.sp,
+
+                    color =
+                        Color(0xFF64748B)
+                )
+
+
+                OutlinedTextField(
+
+                    value =
+                        contrasena,
+
+                    onValueChange = {
+
+                        contrasena =
+                            it
+                    },
+
+                    label = {
+
+                        Text(
+                            text =
+                                "Contraseña actual"
+                        )
+                    },
+
+                    singleLine =
+                        true,
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+                )
+            }
+        },
+
+        confirmButton = {
+
+            TextButton(
+
+                onClick = {
+
+                    onConfirmar(
+                        contrasena
+                    )
+                },
+
+                enabled =
+                    contrasena.length >= 6
+            ) {
+
+                Text(
+                    text =
+                        "Confirmar cita"
+                )
+            }
+        },
+
+        dismissButton = {
+
+            TextButton(
+
+                onClick =
+                    onDismiss
+            ) {
+
+                Text(
+                    text =
+                        "Cancelar"
+                )
+            }
+        }
+    )
 }
 
 
@@ -1411,7 +1597,7 @@ private fun DialogoCancelarCita(
                 Text(
 
                     text =
-                        "La cita no se cancelará automáticamente. El profesional recibirá tu solicitud.",
+                        "La cita se cancelará y el profesional recibirá el motivo de la cancelación.",
 
                     fontSize =
                         13.sp,
